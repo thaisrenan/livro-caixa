@@ -249,6 +249,9 @@ dialog { overflow-x: hidden; }
 .renan-strip .val { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
 .renan-strip .sub { font-size: 0.8rem; color: var(--muted); }
 .split-c { color: var(--split); }
+.closing { display: grid; gap: 8px; }
+.close-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 0.92rem; }
+.close-row input { width: 3.2em; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); text-align: center; }
 .linkbtn { border: 0; background: none; padding: 4px 0 0; color: var(--accent); font-weight: 600; font-size: 0.82rem; text-align: left; cursor: pointer; }
 .muted { color: var(--muted); font-weight: 400; }
 .bankbox { display: grid; gap: 6px; margin-top: 4px; padding: 10px 12px; border-radius: 8px; background: var(--paper); }
@@ -633,6 +636,11 @@ dialog.sheet .sheet-only { display: inline-block; }
       <div class="importbox" id="backupBox" hidden></div>
     </section>
     <section class="set-sec">
+      <h3>Fechamento dos cartões</h3>
+      <p class="hint">Compras no crédito depois desse dia entram na fatura do mês seguinte.</p>
+      <div class="closing" id="closingList"></div>
+    </section>
+    <section class="set-sec">
       <h3>Segurança</h3>
       <div class="actions"><button class="btn" id="lockNow" type="button">Bloquear agora</button><button class="btn" id="changePin" type="button">Trocar PIN</button><button class="btn" id="syncNow" type="button">Sincronizar agora</button></div>
       <div class="actions"><button class="btn danger" id="disconnect" type="button">Desconectar este aparelho</button></div>
@@ -799,7 +807,8 @@ dialog.sheet .sheet-only { display: inline-block; }
     const [a, b] = (t.inst || "").split("/");
     $("f-inst-a").value = a || ""; $("f-inst-b").value = b || "";
     $("f-paid").checked = !!t.paid;
-    $("f-date").value = t.day ? `${state.month}-${pad(t.day)}` : "";
+    $("f-date").value = t.day ? `${t.pm || state.month}-${pad(t.day)}` : "";
+    state.editDate = $("f-date").value;
     syncHint();
     setSplit(splitMode(t), t.renan ? centsToInput(t.renan) : "");
     $("f-adv").value = isAdvance(t) ? "1" : "0";
@@ -814,15 +823,28 @@ dialog.sheet .sheet-only { display: inline-block; }
     render();
   }
   $("cancelEdit").addEventListener("click", () => { resetForm(); render(); if ($("sheet").open) $("sheet").close(); });
-  const targetMonth = () => /^\d{4}-\d{2}-\d{2}$/.test($("f-date").value) ? $("f-date").value.slice(0, 7) : state.month;
+  const closingDay = (m) => (state.settings.closing && state.settings.closing[m]) || 25;
+  const isCreditMethod = (m) => /^cr[eé]dito/i.test(m || "");
+  const purchaseMonth = () => /^\d{4}-\d{2}-\d{2}$/.test($("f-date").value) ? $("f-date").value.slice(0, 7) : null;
+  function targetMonth() {
+    const pm = purchaseMonth();
+    if (!pm) return state.month;
+    // na edição, se a data não mudou, o lançamento continua no mês em que está
+    if (state.editing && $("f-date").value === state.editDate) return state.month;
+    const k = kindVal(), m = $("f-method").value;
+    if ((k === "var" || k === "fixed") && isCreditMethod(m) && +$("f-date").value.slice(8, 10) > closingDay(m)) return shiftMonth(pm, 1);
+    return pm;
+  }
   function syncHint() {
     const ym = targetMonth(), k = kindVal();
     let when = "";
     if (k === "fixed" && !/^cr[eé]dito/i.test($("f-method").value)) {
       const pm = $("f-adv").value === "1" ? shiftMonth(ym, -1) : ym;
       when = ` Paga no salário de ${dayLabel(lastBizDay(pm))}.`;
-    } else if ((k === "var" || k === "fixed") && /^cr[eé]dito/i.test($("f-method").value)) {
-      when = ` Entra na fatura paga em ${dayLabel(lastBizDay(ym))}.`;
+    } else if ((k === "var" || k === "fixed") && isCreditMethod($("f-method").value)) {
+      const moved = purchaseMonth() && purchaseMonth() !== ym;
+      $("formHint").textContent = `${moved ? `Compra depois do fechamento do cartão (dia ${closingDay($("f-method").value)}): ` : ""}entra na fatura paga em ${dayLabel(lastBizDay(ym))}.`.replace(/^e/, "E");
+      return;
     }
     $("formHint").textContent = `Entra em ${monthName(ym)}.` + ($("f-date").value ? "" : " Sem data.") + when;
   }
@@ -853,8 +875,11 @@ dialog.sheet .sheet-only { display: inline-block; }
     if (!store) { msg.textContent = "Ainda carregando seus dados. Tente de novo em alguns segundos."; return; }
     const ym = targetMonth();
     const day = $("f-date").value ? +$("f-date").value.slice(8, 10) : null;
+    const buyMonth = purchaseMonth();
     const base = { kind, desc, amount, cat: $("f-cat").value, method: $("f-method").value || null, inst, paid: $("f-paid").checked, renan, day };
     if (kind === "fixed") base.adv = $("f-adv").value === "1";
+    // mês real da compra, quando ela entra na fatura do mês seguinte
+    base.pm = buyMonth && buyMonth !== ym ? buyMonth : null;
     $("submitBtn").disabled = true;
     const before = state.editing ? itemsOf(state.month).find(i => i.id === state.editing) : null;
     try {
@@ -1149,7 +1174,7 @@ dialog.sheet .sheet-only { display: inline-block; }
         html += `<div class="tx k-${kind}${state.editing === t.id ? " editing" : ""}">
           <span class="stripe" aria-hidden="true"></span>
           <div><div class="desc">${esc(t.desc)}</div><div class="meta">
-            <span class="when${t.day ? "" : " none"}">${t.day ? `${pad(t.day)}/${state.month.slice(5)}` : "sem data"}</span>
+            <span class="when${t.day ? "" : " none"}">${t.day ? `${pad(t.day)}/${(t.pm || state.month).slice(5)}` : "sem data"}</span>
             ${t.inst ? `<span class="tag inst">${esc(t.inst.replace("/", " de "))}</span>` : ""}
             ${t.renan ? `<span class="tag split">Renan ${t.renan === t.amount ? "paga tudo" : fmt(t.renan)}</span>` : ""}
             <span class="tag">${esc(t.cat)}</span>${t.method ? `<span class="mth">${bankBadge(t.method)}${esc(t.method)}</span>` : ""}${SOURCES[t.src] ? `<span class="tag src">${SOURCES[t.src]}</span>` : ""}</div></div>
@@ -1358,7 +1383,7 @@ dialog.sheet .sheet-only { display: inline-block; }
             <button type="button" class="tick" role="checkbox" aria-checked="${st}" aria-label="Fatura ${esc(name)} paga" data-cyc-card="${esc(name)}">${st === "true" ? "✓" : st === "mixed" ? "–" : ""}</button>
             <div><div class="name mth">${bankBadge(name)}${esc(cardLabel(name))}</div><div class="meta">${/renan/i.test(name) ? "Você manda o dinheiro e ele paga a fatura · " : ""}${list.length} ${list.length === 1 ? "lançamento" : "lançamentos"}${renanOf(list) ? ` · Renan ${fmt(renanOf(list))}` : ""} · <span class="more">ver itens</span></div></div>
             <span class="amt">${fmt(full(list))}</span></summary>
-            <div class="sublist">${sorted.map(i => `<div class="srow"><span>${i.day ? pad(i.day) + "/" + M.slice(5) + " · " : ""}${esc(i.desc)}${i.inst ? " (" + esc(i.inst) + ")" : ""}</span><span class="num">${fmt(i.amount)}</span></div>`).join("")}</div></details>`;
+            <div class="sublist">${sorted.map(i => `<div class="srow"><span>${i.day ? pad(i.day) + "/" + (i.pm || M).slice(5) + " · " : ""}${esc(i.desc)}${i.inst ? " (" + esc(i.inst) + ")" : ""}</span><span class="num">${fmt(i.amount)}</span></div>`).join("")}</div></details>`;
         }).join("") + `</div>`;
     }
     html += group(`Contas de ${mName}`, c.consumo, M);
@@ -1720,6 +1745,8 @@ dialog.sheet .sheet-only { display: inline-block; }
     $("recShow").hidden = true; $("backupBox").hidden = true; $("discMsg").textContent = ""; disarm = false;
     $("disconnect").textContent = "Desconectar este aparelho";
     $("settings").showModal();
+    const cards = [...new Set(METHODS.concat(allItems().map(i => i.method)).filter(isCreditMethod))];
+    $("closingList").innerHTML = cards.map((m, n) => `<label class="close-row" for="cl${n}"><span class="mth">${bankBadge(m)}${esc(m)}</span><span>fecha dia <input id="cl${n}" data-card="${esc(m)}" inputmode="numeric" maxlength="2" value="${closingDay(m)}"></span></label>`).join("");
     $("qr").innerHTML = "";
     $("qr").hidden = false;
     try {
@@ -1731,6 +1758,14 @@ dialog.sheet .sheet-only { display: inline-block; }
     } catch (e) { $("qr").hidden = true; toast("Não consegui gerar o QR code. Use o botão Copiar link."); }
   });
   $("setClose").addEventListener("click", () => $("settings").close());
+  $("closingList").addEventListener("change", (e) => {
+    const inp = e.target.closest("[data-card]");
+    if (!inp || !store) return;
+    const d = parseInt(inp.value, 10);
+    if (!(d >= 1 && d <= 31)) { inp.value = closingDay(inp.dataset.card); toast("Use um dia entre 1 e 31."); return; }
+    store.putSettings({ ...state.settings, closing: { ...(state.settings.closing || {}), [inp.dataset.card]: d } });
+    toast(`${inp.dataset.card}: fecha dia ${d}.`);
+  });
   $("copyLink").addEventListener("click", () => {
     navigator.clipboard.writeText(store.linkUrl()).then(() => toast("Link copiado. Abra no outro aparelho."), () => toast("Não consegui copiar. Use o QR code."));
   });

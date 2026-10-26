@@ -249,6 +249,7 @@ dialog { overflow-x: hidden; }
 .renan-strip .val { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
 .renan-strip .sub { font-size: 0.8rem; color: var(--muted); }
 .split-c { color: var(--split); }
+.linkbtn { border: 0; background: none; padding: 4px 0 0; color: var(--accent); font-weight: 600; font-size: 0.82rem; text-align: left; cursor: pointer; }
 .muted { color: var(--muted); font-weight: 400; }
 .bankbox { display: grid; gap: 6px; margin-top: 4px; padding: 10px 12px; border-radius: 8px; background: var(--paper); }
 .bankform { display: grid; gap: 6px; margin-top: 6px; }
@@ -442,7 +443,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     <div><span class="label">Receitas</span><span class="val num v-in" id="sumIn">R$ 0,00</span><span class="sub" id="subIn">—</span></div>
     <div><span class="label">Despesas</span><span class="val num v-out" id="sumOut">R$ 0,00</span><span class="sub" id="subOut">—</span></div>
     <div><span class="label">Investido</span><span class="val num v-inv" id="sumInv">R$ 0,00</span><span class="sub" id="subInv">—</span></div>
-    <div><span class="label">Disponível para gastar</span><span class="val num" id="sumBal">R$ 0,00</span><span class="sub" id="subBal">—</span></div>
+    <div><span class="label">Resultado do mês</span><span class="val num" id="sumBal">R$ 0,00</span><span class="sub" id="subBal">—</span><button type="button" class="linkbtn" id="goSal">Quanto sobra para o próximo mês? Ver aba Salário</button></div>
   </section>
 
   <div class="grid">
@@ -969,7 +970,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     $("subInv").textContent = t.in ? `${Math.round(t.invest / t.in * 100)}% das receitas` : "—";
     $("sumBal").textContent = fmt(t.free);
     $("sumBal").className = "val num " + (t.free > 0 ? "v-in" : t.free < 0 ? "v-out" : "");
-    $("subBal").textContent = t.pendOut ? `Ainda a pagar: ${fmt(t.pendOut)} (${t.nPendOut})` : items.length ? "Nada pendente" : "—";
+    $("subBal").textContent = "Receitas menos despesas deste mês, sem a parte do Renan" + (t.pendOut ? ` · ainda a pagar ${fmt(t.pendOut)}` : "");
 
     renderRenan(t);
     renderMethods(items);
@@ -1444,6 +1445,7 @@ dialog.sheet .sheet-only { display: inline-block; }
 
   // ---------- vistas ----------
   document.querySelectorAll(".tabs button").forEach(b => b.addEventListener("click", () => { state.view = b.dataset.view; render(); window.scrollTo(0, 0); }));
+  $("goSal").addEventListener("click", () => { state.view = "sal"; render(); window.scrollTo(0, 0); });
   $("yprev").addEventListener("click", () => { state.year--; renderYear(); });
   $("ynext").addEventListener("click", () => { state.year++; renderYear(); });
 

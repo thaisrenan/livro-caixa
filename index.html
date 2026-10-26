@@ -559,7 +559,7 @@ dialog.sheet .sheet-only { display: inline-block; }
         <section class="panel" aria-labelledby="resTitle">
           <div class="panel-head"><h2 id="resTitle">Reserva de emergência</h2></div>
           <p class="hint" id="resIntro">—</p>
-          <div class="field"><label class="label" for="f-reserve">Quanto você já tem guardado</label>
+          <div class="field"><label class="label" for="f-reserve">Quanto você já tem guardado (caixinha do Mercado Pago e outros investimentos)</label>
             <div class="settle"><div class="amount"><span>R$</span><input id="f-reserve" inputmode="decimal" placeholder="0,00" autocomplete="off"></div><button class="btn" id="saveReserve" type="button">Salvar</button></div>
           </div>
           <div class="meter" id="resMeter"></div>
@@ -1289,15 +1289,20 @@ dialog.sheet .sheet-only { display: inline-block; }
       have = bk.amount - spentAfter;
       const diff = bk.amount - (x.left + spentAfter);
       html += `<div class="bankbox">
-        <div class="r"><span>No banco em ${bkDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}</span><span>${fmt(bk.amount)}</span></div>
+        <div class="r"><span>Nas contas em ${bkDate.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}${bk.parts ? ` <small class="muted">(Itaú ${fmt(bk.parts.itau || 0)} · Mercado Pago ${fmt(bk.parts.mp || 0)})</small>` : ""}</span><span>${fmt(bk.amount)}</span></div>
         ${spentAfter ? `<div class="r"><span>Gastos lançados depois disso</span><span>− ${fmt(spentAfter)}</span></div>` : ""}
         <div class="r"><span><b>Ainda tem</b></span><span class="big ${have < 0 ? "v-out" : "v-in"}">${fmt(have)}</span></div>
         ${Math.abs(diff) >= 100 ? `<p class="hint">O banco tem ${fmt(Math.abs(diff))} ${diff > 0 ? "a mais" : "a menos"} do que o app calcula. ${diff > 0 ? "Pode ser dinheiro que entrou e não foi lançado, ou contas lançadas que saíram de outra conta." : "Pode ser gasto que não foi lançado, ou a parte do Renan que ele ainda não devolveu."} O "Ainda tem" usa o valor do banco.</p>` : ""}
       </div>`;
     }
     html += `<p class="hint">${have > 0 && daysLeft > 0 ? `Dá ${fmt(Math.floor(have / daysLeft))} por dia nos próximos ${daysLeft} ${daysLeft === 1 ? "dia" : "dias"}.` : have <= 0 ? `O dinheiro de ${mLabel} acabou antes do próximo salário.` : ""}</p>
-      <div class="bankform"><label class="label" for="bankIn">${useBank ? "Atualizar saldo do banco" : "Conferir com o banco: quanto tem na conta agora?"}</label>
-        <div class="settle"><div class="amount"><span>R$</span><input id="bankIn" inputmode="decimal" placeholder="0,00" autocomplete="off"></div><button class="btn" type="button" data-bank-save>Salvar</button></div></div></div>`;
+      <div class="bankform"><span class="label">${useBank ? "Atualizar saldo das contas" : "Conferir com o banco: quanto tem nas contas agora?"}</span>
+        <div class="row2">
+          <div class="field"><label class="hint" for="bankItau">Itaú</label><div class="amount"><span>R$</span><input id="bankItau" inputmode="decimal" placeholder="0,00" autocomplete="off"></div></div>
+          <div class="field"><label class="hint" for="bankMp">Mercado Pago, sem a caixinha</label><div class="amount"><span>R$</span><input id="bankMp" inputmode="decimal" placeholder="0,00" autocomplete="off"></div></div>
+        </div>
+        <button class="btn" type="button" data-bank-save>Salvar saldos</button>
+        <p class="hint">A caixinha é a sua reserva: o valor dela vai em Ano e planejamento → Reserva de emergência.</p></div></div>`;
     return html;
   }
 
@@ -1399,9 +1404,10 @@ dialog.sheet .sheet-only { display: inline-block; }
 
   $("viewSal").addEventListener("click", (e) => {
     if (e.target.closest("[data-bank-save]")) {
-      const v = parseAmount($("bankIn").value);
-      if (!Number.isFinite(v) || !store) { toast("Digite o saldo, por exemplo 34,98."); return; }
-      store.putSettings({ ...state.settings, bank: { amount: v, date: todayISO } });
+      const read = (id) => $(id).value.trim() ? parseAmount($(id).value) : 0;
+      const itau = read("bankItau"), mp = read("bankMp");
+      if (!Number.isFinite(itau) || !Number.isFinite(mp) || !store || (!$("bankItau").value.trim() && !$("bankMp").value.trim())) { toast("Digite o saldo, por exemplo 34,98."); return; }
+      store.putSettings({ ...state.settings, bank: { amount: itau + mp, parts: { itau, mp }, date: todayISO } });
       toast("Saldo do banco salvo.");
       return;
     }

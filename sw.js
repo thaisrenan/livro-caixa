@@ -1,6 +1,6 @@
 // Guarda o app no aparelho para abrir rápido e funcionar sem internet.
 // Os dados não passam por aqui: as chamadas ao Supabase vão sempre direto para a rede.
-const VERSION = "lc-v9";
+const VERSION = "lc-v10";
 const SHELL = ["./", "index.html", "config.js", "importer.js", "vault.js", "qrcode.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {

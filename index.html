@@ -244,6 +244,9 @@ dialog { overflow-x: hidden; }
 .cyc-flow > div { display: grid; gap: 4px; }
 .cyc-flow .val { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; }
 .cyc-flow .sub { font-size: 0.82rem; color: var(--muted); }
+.cyc-main { display: grid; gap: 4px; padding: 16px 18px; border-radius: 10px; background: var(--in-soft); }
+.cyc-main .hero-num { font-family: var(--font-display); font-size: 2.6rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
+.cyc-main .sub { font-size: 0.9rem; color: var(--ink); }
 .renan-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 4px; padding: 12px 14px; border-radius: 8px; background: var(--split-soft); }
 .renan-strip > div { display: grid; gap: 2px; }
 .renan-strip .val { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; }
@@ -413,14 +416,18 @@ dialog.sheet .sheet-only { display: inline-block; }
   <div id="viewSal" hidden>
     <section class="panel cyc-hero" aria-labelledby="cycTitle">
       <div class="panel-head"><h2 id="cycTitle">—</h2><span class="chipmini" id="cycChip"></span></div>
+      <div class="cyc-main">
+        <span class="label" id="cycMainLabel">Sobra para o mês</span>
+        <span class="hero-num num" id="cycMain">—</span>
+        <span class="sub" id="cycMainSub"></span>
+      </div>
       <div class="cyc-flow">
         <div><span class="label">Salário</span><span class="val num v-in" id="cycIn">—</span><span class="sub" id="cycInSub"></span></div>
         <span class="cyc-op" aria-hidden="true">−</span>
-        <div><span class="label">Sai no mesmo dia</span><span class="val num v-out" id="cycPay">—</span><span class="sub" id="cycPaySub"></span></div>
-        <span class="cyc-op" aria-hidden="true">=</span>
-        <div><span class="label" id="cycFreeLabel">Sobra do salário</span><span class="val num" id="cycFree">—</span><span class="sub" id="cycFreeSub"></span></div>
+        <div><span class="label">Contas do dia</span><span class="val num v-out" id="cycPay">—</span><span class="sub" id="cycPaySub"></span></div>
+        <span class="cyc-op" aria-hidden="true">+</span>
+        <div><span class="label">Renan te paga</span><span class="val num split-c" id="cycRen">—</span><span class="sub" id="cycRenSub"></span></div>
       </div>
-      <div class="renan-strip" id="cycRenan" hidden></div>
     </section>
     <div class="cyc-cols">
       <section class="panel" aria-labelledby="cycListTitle">
@@ -1292,8 +1299,8 @@ dialog.sheet .sheet-only { display: inline-block; }
     const inWin = (ym, i) => { const d = new Date(+ym.slice(0, 4), +ym.slice(5) - 1, i.day || 1); return d >= c.payday && d < c.next; };
     c.renanPaid = full([M, N].flatMap(ym => itemsOf(ym).filter(i => i.kind === "settle" && inWin(ym, i))));
     c.renanDue = Math.max(0, c.renanBack - c.renanPaid);
-    c.free = c.freeSal + c.renanPaid;
-    c.freeIfPaid = c.freeSal + Math.max(c.renanBack, c.renanPaid);
+    // o Renan sempre paga: a sobra conta com a parte dele; o que ele já pagou só muda o aviso
+    c.free = c.freeSal + Math.max(c.renanBack, c.renanPaid);
     c.spent = full(c.daily);
     c.left = c.free - c.spent;
     return c;
@@ -1307,7 +1314,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     const useBank = bkDate && bkDate >= x.payday && bkDate < x.next;
     let html = `<div class="kv">
       <div class="r"><span>Sobrou do salário de ${dayLabel(x.payday)}</span><span>${fmt(x.freeSal)}</span></div>
-      ${x.renanBack ? `<div class="r"><span>Renan já devolveu${x.renanDue ? ` <small class="muted">(falta ${fmt(x.renanDue)})</small>` : ""}</span><span class="split-c">+ ${fmt(x.renanPaid)}</span></div>` : ""}
+      ${x.renanBack ? `<div class="r"><span>Parte do Renan <small class="muted">(${x.renanDue ? (x.renanPaid ? `falta ele pagar ${fmt(x.renanDue)}` : "ainda vai pagar") : "já pagou"})</small></span><span class="split-c">+ ${fmt(x.renanBack)}</span></div>` : ""}
       <div class="r"><span>Gasto no dia a dia de ${mLabel} (débito, PIX)</span><span>− ${fmt(x.spent)}</span></div>
       <div class="r"><span>${useBank ? "Pelo que está lançado" : "<b>Ainda tem</b>"}</span><span class="${useBank ? "" : "big "}${x.left < 0 ? "v-out" : "v-in"}">${fmt(x.left)}</span></div>`;
     let have = x.left;
@@ -1349,21 +1356,15 @@ dialog.sheet .sheet-only { display: inline-block; }
     $("cycPay").textContent = fmt(c.totPay);
     const pendPay = c.payList.filter(i => !i.paid);
     $("cycPaySub").textContent = c.payList.length ? (pendPay.length ? `Falta pagar ${fmt(full(pendPay))}` : "Tudo pago") : "Nada para pagar";
-    $("cycFreeLabel").textContent = "Sobra do salário";
-    $("cycFree").textContent = fmt(c.freeSal);
-    $("cycFree").className = "val num " + (c.freeSal > 0 ? "v-in" : c.freeSal < 0 ? "v-out" : "");
     const totalDays = daysBetween(c.payday, c.next);
-    $("cycFreeSub").textContent = c.renanBack ? `Sem contar o que o Renan devolve` : c.free > 0 ? `${fmt(Math.floor(c.free / totalDays))} por dia até ${dayLabel(c.next)}` : "Não sobra para o mês: reveja os gastos";
-    // faixa do Renan: quanto dessas contas é dele e como fica a sobra quando ele devolver
-    if (c.renanBack) {
-      const parts = [["contas adiantadas", renanOf(c.advance)], ["contas do mês", renanOf(c.consumo)], ["cartões", renanOf(Object.values(c.cards).flat())]].filter(x => x[1]);
-      $("cycRenan").hidden = false;
-      $("cycRenan").innerHTML = `<div><span class="label">Parte do Renan nessas contas</span><span class="val num split-c">${fmt(c.renanBack)}</span>
-          <span class="sub">${c.renanDue ? `<b>Falta ele devolver ${fmt(c.renanDue)}</b>` : "Ele já devolveu tudo"}${c.renanPaid && c.renanDue ? ` · já devolveu ${fmt(c.renanPaid)}` : ""}</span>
-          <span class="sub">${parts.map(([n, v]) => `${n} ${fmt(v)}`).join(" · ")}</span></div>
-        <div><span class="label">Sobra para ${nName}${c.renanDue ? ", com o que ele já devolveu" : ""}</span><span class="val num ${c.free < 0 ? "v-out" : "v-in"}">${fmt(c.free)}</span>
-          <span class="sub">${c.renanDue ? `Quando ele devolver o resto: ${fmt(c.freeIfPaid)}` : c.free > 0 ? `${fmt(Math.floor(c.free / totalDays))} por dia até ${dayLabel(c.next)}` : "Não sobra para o mês: reveja os gastos"}</span></div>`;
-    } else $("cycRenan").hidden = true;
+    // número principal: o que sobra para o mês seguinte depois que o Renan paga a parte dele
+    $("cycMainLabel").textContent = c.renanBack ? `Sobra para ${nName}, depois que o Renan te pagar` : `Sobra para ${nName}`;
+    $("cycMain").textContent = fmt(c.free);
+    $("cycMain").className = "hero-num num " + (c.free > 0 ? "v-in" : c.free < 0 ? "v-out" : "");
+    $("cycMainSub").textContent = c.free > 0 ? `${fmt(Math.floor(c.free / totalDays))} por dia até ${dayLabel(c.next)}` : "Não sobra para o mês: reveja os gastos";
+    const parts = [["aluguel e contas adiantadas", renanOf(c.advance)], ["contas do mês", renanOf(c.consumo)], ["cartões", renanOf(Object.values(c.cards).flat())]].filter(x => x[1]);
+    $("cycRen").textContent = fmt(c.renanBack);
+    $("cycRenSub").textContent = !c.renanBack ? "Nada dividido" : (c.renanDue ? (c.renanPaid ? `Já pagou ${fmt(c.renanPaid)}, falta ${fmt(c.renanDue)}` : "Ainda vai pagar") : "Já pagou") + " · " + parts.map(([n, v]) => `${n} ${fmt(v)}`).join(" · ");
 
     // lista do que pagar no dia
     const row = (i, ym, note) => `<div class="crow${i.paid ? " done" : ""}">
@@ -1422,11 +1423,11 @@ dialog.sheet .sheet-only { display: inline-block; }
     const left = totalDays - elapsed;
     $("cycAfter").innerHTML = (phase === "durante" ? livingHtml(c, left, nName) : `<div class="kv">
       <div class="r"><span>Sobra do salário</span><span>${fmt(c.freeSal)}</span></div>
-      ${c.renanBack ? `<div class="r"><span>Renan já devolveu${c.renanDue ? ` <small class="muted">(falta ${fmt(c.renanDue)})</small>` : ""}</span><span class="split-c">+ ${fmt(c.renanPaid)}</span></div>` : ""}
+      ${c.renanBack ? `<div class="r"><span>Parte do Renan <small class="muted">(${c.renanDue ? (c.renanPaid ? `falta ele pagar ${fmt(c.renanDue)}` : "ainda vai pagar") : "já pagou"})</small></span><span class="split-c">+ ${fmt(c.renanBack)}</span></div>` : ""}
       <div class="r"><span>Gasto no débito, PIX e dinheiro</span><span>− ${fmt(c.spent)}</span></div>
       <div class="daybar"><i class="${c.left < 0 ? "over" : ""}" style="width:${pct.toFixed(1)}%"></i></div>
       <div class="r"><span><b>Resta</b></span><span class="big ${c.left < 0 ? "v-out" : ""}">${fmt(c.left)}</span></div>
-      <p class="hint">${phase === "antes" ? `Começa em ${dayLabel(c.payday)}. ${c.free > 0 ? `Planeje ${fmt(Math.floor(c.free / totalDays))} por dia.` : c.freeIfPaid > 0 ? `Depende do Renan devolver: com a parte dele, dá ${fmt(Math.floor(c.freeIfPaid / totalDays))} por dia.` : "Planeje cortes antes do salário."}` : `Ciclo encerrado em ${dayLabel(c.next)}.`}</p></div>`) +
+      <p class="hint">${phase === "antes" ? `Começa em ${dayLabel(c.payday)}. ${c.free > 0 ? `Planeje ${fmt(Math.floor(c.free / totalDays))} por dia.` : "Planeje cortes antes do salário."}` : `Ciclo encerrado em ${dayLabel(c.next)}.`}</p></div>`) +
       `<p class="hint">Compras no crédito não entram aqui: vão para a fatura do próximo salário.</p>` +
       (c.daily.length ? `<div class="cyc-list" style="margin-top:12px">${c.daily.slice().sort((a, b) => (b.day || 0) - (a.day || 0)).slice(0, 12).map(i => `<div class="crow"><span></span><div><div class="name">${esc(i.desc)}</div><div class="meta">${i.day ? pad(i.day) + "/" + c.N.slice(5) + " · " : ""}${esc(i.method || "")}</div></div><span class="amt">${fmt(i.amount)}</span></div>`).join("")}</div>` : "");
   }

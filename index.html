@@ -240,6 +240,44 @@ dialog .rep > * { min-width: 0; }
 dialog { overflow-x: hidden; }
 .toprow { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .acct { display: flex; align-items: center; gap: 10px; }
+.cyc-hero .cyc-flow { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: start; }
+.cyc-flow > div { display: grid; gap: 4px; }
+.cyc-flow .val { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; }
+.cyc-flow .sub { font-size: 0.82rem; color: var(--muted); }
+.cyc-op { font-family: var(--font-display); font-size: 1.6rem; color: var(--muted); padding-top: 18px; }
+.cyc-cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.cyc-list { display: grid; gap: 18px; }
+.cgroup { display: grid; gap: 2px; }
+.cgroup-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-bottom: 6px; border-bottom: 2px solid var(--ink); }
+.cgroup-head .tot { font-weight: 600; font-variant-numeric: tabular-nums; }
+.crow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--rule); }
+.crow .name { font-weight: 600; overflow-wrap: anywhere; }
+.crow .meta { font-size: 0.8rem; color: var(--muted); }
+.crow .amt { font-weight: 600; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.crow .amt small { display: block; font-size: 0.75rem; font-weight: 500; color: var(--muted); }
+.crow.done .name, .crow.done .amt { color: var(--muted); text-decoration: line-through; }
+.tick { width: 26px; height: 26px; border-radius: 7px; border: 2px solid var(--muted); background: var(--sheet); display: grid; place-items: center; color: var(--sheet); font-size: 0.9rem; padding: 0; }
+.tick[aria-checked="true"] { background: var(--in); border-color: var(--in); }
+.tick[aria-checked="mixed"] { background: var(--warn); border-color: var(--warn); }
+details.cards > summary { list-style: none; cursor: pointer; }
+details.cards > summary::-webkit-details-marker { display: none; }
+details.cards .sublist { padding-left: 36px; font-size: 0.88rem; }
+details.cards .sublist .srow { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--rule); color: var(--muted); }
+details.cards .more { color: var(--accent); font-size: 0.8rem; font-weight: 600; }
+.big { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; }
+.kv { display: grid; gap: 6px; }
+.kv .r { display: flex; justify-content: space-between; gap: 10px; font-size: 0.92rem; }
+.kv .r span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+.daybar { height: 10px; background: var(--paper); border-radius: 5px; overflow: hidden; }
+.daybar i { display: block; height: 100%; background: var(--split); }
+.daybar i.over { background: var(--out); }
+.fab.show { display: block; }
+@media (max-width: 900px) {
+  .cyc-cols { grid-template-columns: 1fr; }
+  .cyc-cols > .maincol { order: -1; }
+  .cyc-hero .cyc-flow { grid-template-columns: 1fr; gap: 10px; }
+  .cyc-op { display: none; }
+}
 .headtools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .tabs { display: flex; background: var(--sheet); border: 1px solid var(--rule); border-radius: 999px; padding: 4px; gap: 2px; }
 .tabs button { border: 0; background: transparent; padding: 8px 14px; border-radius: 999px; font-weight: 600; color: var(--muted); }
@@ -332,7 +370,8 @@ dialog.sheet .sheet-only { display: inline-block; }
     </div>
     <div class="headtools">
       <div class="tabs" role="tablist" aria-label="Vista">
-        <button role="tab" id="tab-mes" data-view="mes" aria-selected="true">Mês</button>
+        <button role="tab" id="tab-sal" data-view="sal" aria-selected="true">Salário</button>
+        <button role="tab" id="tab-mes" data-view="mes" aria-selected="false">Mês</button>
         <button role="tab" id="tab-ano" data-view="ano" aria-selected="false">Ano e planejamento</button>
       </div>
       <div class="monthnav" role="group" aria-label="Mês" id="monthNav">
@@ -347,6 +386,36 @@ dialog.sheet .sheet-only { display: inline-block; }
       </div>
     </div>
   </header>
+
+  <div id="viewSal" hidden>
+    <section class="panel cyc-hero" aria-labelledby="cycTitle">
+      <div class="panel-head"><h2 id="cycTitle">—</h2><span class="chipmini" id="cycChip"></span></div>
+      <div class="cyc-flow">
+        <div><span class="label">Entra no dia</span><span class="val num v-in" id="cycIn">—</span><span class="sub" id="cycInSub"></span></div>
+        <span class="cyc-op" aria-hidden="true">−</span>
+        <div><span class="label">Sai no mesmo dia</span><span class="val num v-out" id="cycPay">—</span><span class="sub" id="cycPaySub"></span></div>
+        <span class="cyc-op" aria-hidden="true">=</span>
+        <div><span class="label" id="cycFreeLabel">Sobra para o mês</span><span class="val num" id="cycFree">—</span><span class="sub" id="cycFreeSub"></span></div>
+      </div>
+    </section>
+    <div class="cyc-cols">
+      <section class="panel" aria-labelledby="cycListTitle">
+        <div class="panel-head"><h2 id="cycListTitle">Pagar no dia do salário</h2><span class="tot num" id="cycListTot"></span></div>
+        <p class="hint" id="cycListHint"></p>
+        <div id="cycList" class="cyc-list"></div>
+      </section>
+      <div class="maincol">
+        <section class="panel" id="cycNowPanel" aria-labelledby="cycNowTitle">
+          <div class="panel-head"><h2 id="cycNowTitle">Até o salário</h2></div>
+          <div id="cycNow"></div>
+        </section>
+        <section class="panel" aria-labelledby="cycAfterTitle">
+          <div class="panel-head"><h2 id="cycAfterTitle">Dia a dia</h2><span class="tot num" id="cycAfterTot"></span></div>
+          <div id="cycAfter"></div>
+        </section>
+      </div>
+    </div>
+  </div>
 
   <div id="viewMes">
   <section class="summary" aria-label="Resumo do mês">
@@ -382,6 +451,9 @@ dialog.sheet .sheet-only { display: inline-block; }
             <div class="inst"><input id="f-inst-a" inputmode="numeric" placeholder="1" aria-label="Parcela atual"><span>de</span><input id="f-inst-b" inputmode="numeric" placeholder="1" aria-label="Total de parcelas"></div>
           </div>
           <label class="check" id="rowFuture"><input type="checkbox" id="f-future" checked> Lançar as parcelas seguintes nos próximos meses</label>
+          <div class="field" id="rowAdv"><label class="label" for="f-adv">Paga com o salário</label>
+            <select id="f-adv"><option value="0">do próprio mês (luz, água, gás)</option><option value="1">do mês anterior, adiantada (aluguel, faculdade, celular)</option></select>
+          </div>
           <div class="field" id="rowSplit"><label class="label" for="f-split">Dividir com o Renan</label>
             <div class="row2">
               <select id="f-split"><option value="none">Não dividir</option><option value="half">Metade</option><option value="all">Renan paga tudo</option><option value="custom">Outro valor</option></select>
@@ -586,7 +658,7 @@ dialog.sheet .sheet-only { display: inline-block; }
   const thisMonth = `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
   const todayISO = `${thisMonth}-${pad(now.getDate())}`;
 
-  const state = { view: location.hash === "#ano" ? "ano" : "mes", year: +thisMonth.slice(0, 4), settings: {}, months: {}, month: thisMonth, filter: "all", q: "", editing: null, confirmDel: null, ready: false, pendingImport: null };
+  const state = { view: location.hash === "#ano" ? "ano" : location.hash === "#mes" ? "mes" : "sal", year: +thisMonth.slice(0, 4), settings: {}, months: {}, month: thisMonth, filter: "all", q: "", editing: null, confirmDel: null, ready: false, pendingImport: null };
   let store = null, downloads = null;
 
   // ---------- armazenamento: cofre criptografado (vault.js) ----------
@@ -644,6 +716,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     $("fieldInst").hidden = k !== "var";
     $("rowFuture").hidden = k !== "var" || !!state.editing;
     $("rowSplit").hidden = k === "in" || k === "invest";
+    $("rowAdv").hidden = k !== "fixed";
     $("paidLabel").textContent = k === "in" ? "Já recebi" : k === "invest" ? "Já apliquei" : "Já está pago";
     $("f-desc").placeholder = { in: "Ex.: Salário", fixed: "Ex.: Aluguel", var: "Ex.: Ifood", invest: "Ex.: Renda fixa" }[k];
   }
@@ -652,6 +725,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     if (state.editing) return;
     const d = $("f-desc").value.trim().toLowerCase();
     const prev = allItems().filter(i => i.kind === kindVal() && i.desc.toLowerCase() === d).pop();
+    if (!prev && kindVal() === "fixed") { $("f-adv").value = ADV_RE.test($("f-desc").value) ? "1" : "0"; syncHint(); }
     if (!prev && (kindVal() === "var" || kindVal() === "fixed") && window.LivroCaixaImport) {
       const g = LivroCaixaImport.guessCat($("f-desc").value);
       if (g !== "Outros") $("f-cat").value = g;
@@ -699,21 +773,33 @@ dialog.sheet .sheet-only { display: inline-block; }
     $("f-date").value = t.day ? `${state.month}-${pad(t.day)}` : "";
     syncHint();
     setSplit(splitMode(t), t.renan ? centsToInput(t.renan) : "");
+    $("f-adv").value = isAdvance(t) ? "1" : "0";
+    syncHint();
     $("formTitle").textContent = "Editar lançamento";
     $("submitBtn").textContent = "Salvar alterações";
     $("cancelEdit").hidden = false;
     $("formMsg").textContent = "";
-    if (isPhone()) openSheet();
+    if (isPhone() || state.view !== "mes") openSheet();
     $("f-desc").focus();
     render();
   }
   $("cancelEdit").addEventListener("click", () => { resetForm(); render(); if ($("sheet").open) $("sheet").close(); });
   const targetMonth = () => /^\d{4}-\d{2}-\d{2}$/.test($("f-date").value) ? $("f-date").value.slice(0, 7) : state.month;
   function syncHint() {
-    const ym = targetMonth();
-    $("formHint").textContent = `Entra em ${monthName(ym)}.` + ($("f-date").value ? "" : " Sem data.");
+    const ym = targetMonth(), k = kindVal();
+    let when = "";
+    if (k === "fixed" && !/^cr[eé]dito/i.test($("f-method").value)) {
+      const pm = $("f-adv").value === "1" ? shiftMonth(ym, -1) : ym;
+      when = ` Paga no salário de ${dayLabel(lastBizDay(pm))}.`;
+    } else if ((k === "var" || k === "fixed") && /^cr[eé]dito/i.test($("f-method").value)) {
+      when = ` Entra na fatura paga em ${dayLabel(lastBizDay(ym))}.`;
+    }
+    $("formHint").textContent = `Entra em ${monthName(ym)}.` + ($("f-date").value ? "" : " Sem data.") + when;
   }
   $("f-date").addEventListener("change", syncHint);
+  $("f-adv").addEventListener("change", syncHint);
+  $("f-method").addEventListener("change", syncHint);
+  form.querySelectorAll('input[name="kind"]').forEach(r => r.addEventListener("change", syncHint));
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const msg = $("formMsg");
@@ -738,6 +824,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     const ym = targetMonth();
     const day = $("f-date").value ? +$("f-date").value.slice(8, 10) : null;
     const base = { kind, desc, amount, cat: $("f-cat").value, method: $("f-method").value || null, inst, paid: $("f-paid").checked, renan, day };
+    if (kind === "fixed") base.adv = $("f-adv").value === "1";
     $("submitBtn").disabled = true;
     try {
       if (state.editing && ym === state.month) {
@@ -810,14 +897,17 @@ dialog.sheet .sheet-only { display: inline-block; }
 
   // ---------- renderização ----------
   function render() {
+    $("viewSal").hidden = state.view !== "sal";
     $("viewMes").hidden = state.view !== "mes";
+    $("fab").classList.toggle("show", state.view !== "mes");
     $("viewAno").hidden = state.view !== "ano";
-    $("monthNav").hidden = state.view !== "mes";
+    $("monthNav").hidden = state.view === "ano";
     $("yearNav").hidden = state.view !== "ano";
     document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === state.view)));
     if (state.view === "ano") renderYear();
     const mn = monthName(state.month);
-    $("monthLabel").textContent = mn.charAt(0).toUpperCase() + mn.slice(1);
+    $("monthLabel").textContent = state.view === "sal" ? `Salário de ${mn.split(" de ")[0]}` : mn.charAt(0).toUpperCase() + mn.slice(1);
+    if (state.view === "sal") renderCycle();
     const items = itemsOf(state.month);
     const t = totals(items);
     $("sumIn").textContent = fmt(t.in);
@@ -1078,6 +1168,151 @@ dialog.sheet .sheet-only { display: inline-block; }
     try { await downloads.save({ filename: "livro-caixa.csv", data: csv }); } catch (err) {}
   });
 
+
+
+  // ---------- ciclo do salário ----------
+  // No último dia útil do mês M cai o salário. Nesse dia saem: as faturas dos cartões com os gastos de M,
+  // as contas de consumo de M (luz, água, gás) e as contas de M+1 pagas adiantado (aluguel, faculdade, celular).
+  // O que sobra paga o dia a dia de M+1 no débito, PIX ou dinheiro.
+  const ADV_RE = /aluguel|faculdade|celular|claro|vivo|\btim\b|condom|escola|mensalidade|internet/i;
+  const isCard = (i) => /^cr[eé]dito/i.test(i.method || "");
+  const isAdvance = (i) => i.kind === "fixed" && !isCard(i) && (typeof i.adv === "boolean" ? i.adv : ADV_RE.test(i.desc));
+  function lastBizDay(ym) {
+    const [y, m] = ym.split("-").map(Number);
+    const d = new Date(y, m, 0);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+    return d;
+  }
+  const dayLabel = (d) => d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }).replace(".", "");
+  const full = (l) => l.reduce((a, i) => a + i.amount, 0);
+  const renanOf = (l) => l.reduce((a, i) => a + (i.renan || 0), 0);
+  const today0 = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+  const daysBetween = (a, b) => Math.round((b - a) / 864e5);
+
+  function cycle(M) {
+    const N = shiftMonth(M, 1), iM = itemsOf(M), iN = itemsOf(N);
+    const cards = {};
+    iM.filter(i => (i.kind === "fixed" || i.kind === "var") && isCard(i)).forEach(i => (cards[i.method] = cards[i.method] || []).push(i));
+    const c = {
+      M, N, payday: lastBizDay(M), next: lastBizDay(N),
+      income: iM.filter(i => i.kind === "in"),
+      cards,
+      consumo: iM.filter(i => i.kind === "fixed" && !isCard(i) && !isAdvance(i)),
+      advance: iN.filter(isAdvance),
+      invest: iM.filter(i => i.kind === "invest"),
+      daily: iN.filter(i => i.kind === "var" && !isCard(i)),
+    };
+    c.payList = [...Object.values(cards).flat(), ...c.consumo, ...c.advance, ...c.invest];
+    c.totIn = full(c.income);
+    c.totPay = full(c.payList);
+    // a parte do Renan nas contas pagas no dia volta para você e entra na conta da sobra
+    c.renanBack = renanOf(c.payList);
+    c.free = c.totIn + c.renanBack - c.totPay;
+    c.spent = full(c.daily);
+    c.left = c.free - c.spent;
+    return c;
+  }
+
+  function renderCycle() {
+    const M = state.month, c = cycle(M);
+    const nName = monthName(c.N).split(" de ")[0], mName = monthName(M).split(" de ")[0];
+    const t0 = today0();
+    $("cycTitle").textContent = `Salário de ${dayLabel(c.payday)} → ${nName}`;
+    const phase = t0 < c.payday ? "antes" : t0 <= c.next ? "durante" : "passado";
+    $("cycChip").textContent = phase === "antes" ? `faltam ${daysBetween(t0, c.payday)} ${daysBetween(t0, c.payday) === 1 ? "dia" : "dias"}` : phase === "durante" ? "em andamento" : "encerrado";
+    $("cycChip").className = "chipmini" + (phase === "durante" ? " atual" : "");
+    $("cycIn").textContent = fmt(c.totIn + c.renanBack);
+    const pendIn = c.income.filter(i => !i.paid);
+    $("cycInSub").textContent = (!c.income.length ? "Nenhuma receita lançada" : c.renanBack ? `Salário ${fmt(c.totIn)} + parte do Renan ${fmt(c.renanBack)}` : pendIn.length ? `${fmt(full(pendIn))} a receber` : "Recebido");
+    $("cycPay").textContent = fmt(c.totPay);
+    const pendPay = c.payList.filter(i => !i.paid);
+    $("cycPaySub").textContent = c.payList.length ? (pendPay.length ? `Falta pagar ${fmt(full(pendPay))}` : "Tudo pago") : "Nada para pagar";
+    $("cycFreeLabel").textContent = `Sobra para ${nName}`;
+    $("cycFree").textContent = fmt(c.free);
+    $("cycFree").className = "val num " + (c.free > 0 ? "v-in" : c.free < 0 ? "v-out" : "");
+    const totalDays = daysBetween(c.payday, c.next);
+    $("cycFreeSub").textContent = (c.free > 0 ? `${fmt(Math.floor(c.free / totalDays))} por dia até ${dayLabel(c.next)}` : "Não sobra para o mês: reveja os gastos") + (c.renanBack ? ` · contando a parte do Renan` : "");
+
+    // lista do que pagar no dia
+    const row = (i, ym, note) => `<div class="crow${i.paid ? " done" : ""}">
+        <button type="button" class="tick" role="checkbox" aria-checked="${!!i.paid}" aria-label="${i.paid ? "Pago" : "Marcar como pago"}: ${esc(i.desc)}" data-cyc-ym="${ym}" data-cyc-id="${i.id}">${i.paid ? "✓" : ""}</button>
+        <div><div class="name">${esc(i.desc)}</div><div class="meta">${esc(note || i.cat || "")}${i.renan ? ` · Renan ${fmt(i.renan)}` : ""}</div></div>
+        <span class="amt">${fmt(i.amount)}</span></div>`;
+    const group = (title, list, ym, note) => list.length ? `<div class="cgroup"><div class="cgroup-head"><h3>${title}</h3><span class="tot">${fmt(full(list))}</span></div>${list.map(i => row(i, ym, note && note(i))).join("")}</div>` : "";
+    let html = "";
+    const cardNames = Object.keys(c.cards).sort();
+    if (cardNames.length) {
+      html += `<div class="cgroup"><div class="cgroup-head"><h3>Faturas dos cartões (gastos de ${mName})</h3><span class="tot">${fmt(full(Object.values(c.cards).flat()))}</span></div>` +
+        cardNames.map(name => {
+          const list = c.cards[name], paid = list.filter(i => i.paid).length;
+          const st = paid === list.length ? "true" : paid ? "mixed" : "false";
+          const sorted = list.slice().sort((a, b) => b.amount - a.amount);
+          return `<details class="cards"><summary class="crow${st === "true" ? " done" : ""}">
+            <button type="button" class="tick" role="checkbox" aria-checked="${st}" aria-label="Fatura ${esc(name)} paga" data-cyc-card="${esc(name)}">${st === "true" ? "✓" : st === "mixed" ? "–" : ""}</button>
+            <div><div class="name">Fatura ${esc(name)}</div><div class="meta">${list.length} lançamentos${renanOf(list) ? ` · Renan ${fmt(renanOf(list))}` : ""} · <span class="more">ver itens</span></div></div>
+            <span class="amt">${fmt(full(list))}</span></summary>
+            <div class="sublist">${sorted.map(i => `<div class="srow"><span>${i.day ? pad(i.day) + "/" + M.slice(5) + " · " : ""}${esc(i.desc)}${i.inst ? " (" + esc(i.inst) + ")" : ""}</span><span class="num">${fmt(i.amount)}</span></div>`).join("")}</div></details>`;
+        }).join("") + `</div>`;
+    }
+    html += group(`Contas de ${mName}`, c.consumo, M);
+    html += group(`Contas de ${nName}, adiantadas`, c.advance, c.N);
+    if (c.invest.length) html += group("Guardar", c.invest, M);
+    else {
+      const base = baseline(), P = computePlans(base, analyze(base));
+      const sel = P.plans.find(p => p.id === state.settings.plan) || P.plans[1];
+      if (sel && sel.amount > 0) html += `<div class="cgroup"><div class="cgroup-head"><h3>Guardar</h3><span class="tot"></span></div>
+        <div class="crow"><span></span><div><div class="name">Reserva de emergência</div><div class="meta">Plano ${esc(sel.name)}: separe antes de gastar</div></div>
+        <button type="button" class="btn small" id="cycSave" data-amount="${sel.amount}">Guardar ${fmt(sel.amount)}</button></div></div>`;
+    }
+    $("cycList").innerHTML = html || `<p class="empty-note">Nada lançado para pagar no salário de ${dayLabel(c.payday)}.</p>`;
+    $("cycListTot").textContent = fmt(c.totPay);
+    $("cycListHint").textContent = `Tudo o que sai no ${dayLabel(c.payday)}, quando cai o salário. Marque conforme for pagando. Cartões contam o valor cheio da fatura.`;
+    const cs = $("cycSave");
+    if (cs) cs.onclick = () => {
+      const amt = +cs.dataset.amount;
+      save(M, itemsOf(M).concat({ id: newId(), kind: "invest", desc: "Reserva de emergência", cat: "Reserva de emergência", amount: amt, method: "PIX ou Transf.", inst: null, paid: false, day: c.payday.getDate() }));
+    };
+
+    // até o salário: o que resta do ciclo anterior
+    if (phase === "antes") {
+      const p = cycle(shiftMonth(M, -1));
+      const days = Math.max(1, daysBetween(t0, c.payday));
+      $("cycNowPanel").hidden = false;
+      $("cycNowTitle").textContent = `Até ${dayLabel(c.payday)}`;
+      $("cycNow").innerHTML = `<div class="kv">
+        <div class="r"><span>Sobrou do salário de ${dayLabel(p.payday)}</span><span>${fmt(p.free)}</span></div>
+        <div class="r"><span>Gasto no dia a dia de ${mName} (débito, PIX)</span><span>− ${fmt(p.spent)}</span></div>
+        <div class="r"><span><b>Ainda tem</b></span><span class="big ${p.left < 0 ? "v-out" : "v-in"}">${fmt(p.left)}</span></div>
+        <p class="hint">${p.left > 0 ? `Dá ${fmt(Math.floor(p.left / days))} por dia nos próximos ${days} ${days === 1 ? "dia" : "dias"}.` : `O dia a dia de ${mName} já passou do que sobrou do salário.`}</p></div>`;
+    } else $("cycNowPanel").hidden = true;
+
+    // dia a dia do mês seguinte
+    $("cycAfterTitle").textContent = `Dia a dia de ${nName}`;
+    $("cycAfterTot").textContent = c.spent ? fmt(c.spent) : "";
+    const elapsed = phase === "durante" ? Math.max(1, daysBetween(c.payday, t0)) : phase === "passado" ? totalDays : 0;
+    const pct = c.free > 0 ? Math.min(100, c.spent / c.free * 100) : 100;
+    const left = totalDays - elapsed;
+    $("cycAfter").innerHTML = `<div class="kv">
+      <div class="r"><span>Sobra do salário</span><span>${fmt(c.free)}</span></div>
+      <div class="r"><span>Gasto no débito, PIX e dinheiro</span><span>− ${fmt(c.spent)}</span></div>
+      <div class="daybar"><i class="${c.left < 0 ? "over" : ""}" style="width:${pct.toFixed(1)}%"></i></div>
+      <div class="r"><span><b>Resta</b></span><span class="big ${c.left < 0 ? "v-out" : ""}">${fmt(c.left)}</span></div>
+      <p class="hint">${phase === "antes" ? `Começa em ${dayLabel(c.payday)}. Planeje ${c.free > 0 ? fmt(Math.floor(c.free / totalDays)) + " por dia" : "cortes antes do salário"}.` : phase === "durante" ? (c.left > 0 && left > 0 ? `Faltam ${left} dias até ${dayLabel(c.next)}: dá ${fmt(Math.floor(c.left / left))} por dia.` : c.left <= 0 ? "O dinheiro do mês acabou antes do próximo salário." : "") : `Ciclo encerrado em ${dayLabel(c.next)}.`}
+      Compras no crédito não entram aqui: vão para a fatura do próximo salário.</p></div>` +
+      (c.daily.length ? `<div class="cyc-list" style="margin-top:12px">${c.daily.slice().sort((a, b) => (b.day || 0) - (a.day || 0)).slice(0, 12).map(i => `<div class="crow"><span></span><div><div class="name">${esc(i.desc)}</div><div class="meta">${i.day ? pad(i.day) + "/" + c.N.slice(5) + " · " : ""}${esc(i.method || "")}</div></div><span class="amt">${fmt(i.amount)}</span></div>`).join("")}</div>` : "");
+  }
+
+  $("viewSal").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-cyc-id]"), card = e.target.closest("[data-cyc-card]");
+    if (t) { const ym = t.dataset.cycYm; save(ym, itemsOf(ym).map(i => i.id === t.dataset.cycId ? { ...i, paid: !i.paid } : i)); }
+    if (card) {
+      e.preventDefault();
+      const M = state.month, name = card.dataset.cycCard;
+      const list = itemsOf(M).filter(i => (i.kind === "fixed" || i.kind === "var") && i.method === name);
+      const to = !list.every(i => i.paid);
+      save(M, itemsOf(M).map(i => (i.kind === "fixed" || i.kind === "var") && i.method === name ? { ...i, paid: to } : i));
+    }
+  });
 
   // ---------- celular: formulário em folha deslizante ----------
   const isPhone = () => matchMedia("(max-width: 900px)").matches;

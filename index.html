@@ -443,7 +443,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     <div><span class="label">Receitas</span><span class="val num v-in" id="sumIn">R$ 0,00</span><span class="sub" id="subIn">—</span></div>
     <div><span class="label">Despesas</span><span class="val num v-out" id="sumOut">R$ 0,00</span><span class="sub" id="subOut">—</span></div>
     <div><span class="label">Investido</span><span class="val num v-inv" id="sumInv">R$ 0,00</span><span class="sub" id="subInv">—</span></div>
-    <div><span class="label">Resultado do mês</span><span class="val num" id="sumBal">R$ 0,00</span><span class="sub" id="subBal">—</span><button type="button" class="linkbtn" id="goSal">Quanto sobra para o próximo mês? Ver aba Salário</button></div>
+    <div><span class="label">Débito e PIX do mês</span><span class="val num" id="sumBal">R$ 0,00</span><span class="sub" id="subBal">—</span><button type="button" class="linkbtn" id="goSal">Quanto sobra para o próximo mês? Ver aba Salário</button></div>
   </section>
 
   <div class="grid">
@@ -963,14 +963,17 @@ dialog.sheet .sheet-only { display: inline-block; }
     const items = itemsOf(state.month);
     const t = totals(items);
     $("sumIn").textContent = fmt(t.in);
-    $("subIn").textContent = t.pendIn ? `${fmt(t.pendIn)} a receber` : items.some(i => i.kind === "in") ? "Tudo recebido" : "Nenhuma receita";
+    // o salário do mês paga as contas do dia do salário e o mês seguinte; o débito do mês foi pago com o salário anterior
+    const nextName = monthName(shiftMonth(state.month, 1)).split(" de ")[0];
+    $("subIn").textContent = `Cai em ${dayLabel(lastBizDay(state.month))} e é para ${nextName}` + (t.pendIn ? ` · ${fmt(t.pendIn)} a receber` : "");
     $("sumOut").textContent = fmt(t.out);
     $("subOut").textContent = `Fixas ${fmt(t.fixed)} · Variáveis ${fmt(t.var)}` + (t.renan ? ` · sem a parte do Renan (${fmt(t.renan)})` : "");
     $("sumInv").textContent = fmt(t.invest);
     $("subInv").textContent = t.in ? `${Math.round(t.invest / t.in * 100)}% das receitas` : "—";
-    $("sumBal").textContent = fmt(t.free);
-    $("sumBal").className = "val num " + (t.free > 0 ? "v-in" : t.free < 0 ? "v-out" : "");
-    $("subBal").textContent = "Receitas menos despesas deste mês, sem a parte do Renan" + (t.pendOut ? ` · ainda a pagar ${fmt(t.pendOut)}` : "");
+    const dailyHere = items.filter(i => i.kind === "var" && !isCard(i));
+    $("sumBal").textContent = fmt(dailyHere.reduce((a, i) => a + i.amount, 0));
+    $("sumBal").className = "val num";
+    $("subBal").textContent = `Pago com o salário de ${dayLabel(lastBizDay(shiftMonth(state.month, -1)))}`;
 
     renderRenan(t);
     renderMethods(items);

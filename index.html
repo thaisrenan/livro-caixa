@@ -272,6 +272,16 @@ details.cards .more { color: var(--accent); font-size: 0.8rem; font-weight: 600;
 .daybar i { display: block; height: 100%; background: var(--split); }
 .daybar i.over { background: var(--out); }
 .fab.show { display: block; }
+.mth { display: inline-flex; align-items: center; gap: 6px; }
+.bk { display: inline-grid; place-items: center; min-width: 26px; height: 18px; padding: 0 5px; border-radius: 5px; font-size: 0.6rem; font-weight: 800; letter-spacing: 0.02em; color: #fff; text-transform: lowercase; font-style: normal; text-decoration: none; flex: none; }
+.b-itau { background: #ec7000; }
+.b-mp { background: #009ee3; }
+.b-renan { background: #5f6a66; text-transform: none; }
+.b-pix { background: #2a9d8f; }
+.b-bol { background: #3d4543; }
+.b-deb { background: #2b45b8; }
+.b-cash { background: #1b7f52; text-transform: none; }
+.b-other { background: #8a8f8d; }
 @media (max-width: 900px) {
   .cyc-cols { grid-template-columns: 1fr; }
   .cyc-cols > .maincol { order: -1; }
@@ -648,7 +658,15 @@ dialog.sheet .sheet-only { display: inline-block; }
     fixed: OUT_CATS, var: OUT_CATS,
     invest: ["Renda fixa", "Renda variável", "Reserva de emergência", "Outros"],
   };
-  const METHODS = ["Crédito Renan", "Crédito Thais", "Débito Thais", "Boleto", "PIX ou Transf.", "Débito", "Dinheiro"];
+  const METHODS = ["Crédito Thais Itaú", "Crédito Thais Mercado Pago", "Crédito Renan", "Débito Thais", "Boleto", "PIX ou Transf.", "Débito", "Dinheiro"];
+  // selo colorido de cada banco ou forma de pagamento
+  function bankBadge(m) {
+    if (!m) return "";
+    const b = /ita[uú]/i.test(m) ? ["b-itau", "itaú"] : /mercado ?pago/i.test(m) ? ["b-mp", "mp"] : /renan/i.test(m) ? ["b-renan", "R"]
+      : /pix/i.test(m) ? ["b-pix", "pix"] : /boleto/i.test(m) ? ["b-bol", "bol"] : /d[eé]bito/i.test(m) ? ["b-deb", "déb"] : /dinheiro/i.test(m) ? ["b-cash", "R$"] : ["b-other", m.slice(0, 2)];
+    return `<span class="bk ${b[0]}" aria-hidden="true">${esc(b[1])}</span>`;
+  }
+  const cardLabel = (m) => /renan/i.test(m) ? "Cartão do Renan" : "Fatura " + m.replace(/^cr[eé]dito\s+(thais\s+)?/i, "");
   const SOURCES = { fatura: "fatura Itaú", extrato: "extrato Itaú" };
   const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   const fmt = (c) => brl.format(c / 100);
@@ -714,7 +732,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     $("f-cat").innerHTML = options(cats, cat);
     $("f-method").innerHTML = `<option value="">—</option>` + options(methodList(method), method);
     $("fieldInst").hidden = k !== "var";
-    $("rowFuture").hidden = k !== "var" || !!state.editing;
+    $("rowFuture").hidden = k !== "var";
     $("rowSplit").hidden = k === "in" || k === "invest";
     $("rowAdv").hidden = k !== "fixed";
     $("paidLabel").textContent = k === "in" ? "Já recebi" : k === "invest" ? "Já apliquei" : "Já está pago";
@@ -774,6 +792,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     syncHint();
     setSplit(splitMode(t), t.renan ? centsToInput(t.renan) : "");
     $("f-adv").value = isAdvance(t) ? "1" : "0";
+    $("f-future").checked = false;
     syncHint();
     $("formTitle").textContent = "Editar lançamento";
     $("submitBtn").textContent = "Salvar alterações";
@@ -826,6 +845,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     const base = { kind, desc, amount, cat: $("f-cat").value, method: $("f-method").value || null, inst, paid: $("f-paid").checked, renan, day };
     if (kind === "fixed") base.adv = $("f-adv").value === "1";
     $("submitBtn").disabled = true;
+    const before = state.editing ? itemsOf(state.month).find(i => i.id === state.editing) : null;
     try {
       if (state.editing && ym === state.month) {
         await save(ym, itemsOf(ym).map(i => i.id === state.editing ? { ...i, ...base } : i));
@@ -844,11 +864,32 @@ dialog.sheet .sheet-only { display: inline-block; }
           }
         }
       }
+      let extra = "";
+      if (before && inst) {
+        const total = inst.split("/")[1];
+        const sib = (i) => i.id !== before.id && i.kind === "var" && i.inst && (before.group ? i.group === before.group : i.desc === before.desc && i.inst.split("/")[1] === (before.inst || inst).split("/")[1]);
+        // outras parcelas da mesma compra seguem o cartão escolhido
+        if (before.method !== base.method) {
+          let n = 0;
+          for (const m of Object.keys(state.months)) {
+            if (!itemsOf(m).some(i => sib(i) && i.method === before.method)) continue;
+            await save(m, itemsOf(m).map(i => sib(i) && i.method === before.method ? (n++, { ...i, method: base.method }) : i));
+          }
+          if (n) extra = ` Mudei também ${n} ${n === 1 ? "parcela" : "parcelas"}.`;
+        }
+        if ($("f-future").checked) {
+          for (let n = a + 1, k = 1; n <= b; n++, k++) {
+            const fm = shiftMonth(ym, k);
+            if (itemsOf(fm).some(i => (sib(i) || i.desc === desc) && i.inst === `${n}/${total}`)) continue;
+            await save(fm, itemsOf(fm).concat({ id: newId(), ...base, inst: `${n}/${b}`, paid: false, day: null, group: before.group || null }));
+          }
+        }
+      }
       const wasEditing = !!state.editing;
       state.month = ym;
       resetForm(true);
-      if ($("sheet").open) { $("sheet").close(); toast(`${wasEditing ? "Alteração salva" : "Lançamento adicionado"} em ${monthName(ym)}.`); }
-      else $("f-desc").focus();
+      if ($("sheet").open) { $("sheet").close(); toast(`${wasEditing ? "Alteração salva" : "Lançamento adicionado"} em ${monthName(ym)}.${extra}`); }
+      else { $("f-desc").focus(); if (extra) toast(extra.trim()); }
     } finally { $("submitBtn").disabled = false; render(); }
   });
 
@@ -1012,14 +1053,14 @@ dialog.sheet .sheet-only { display: inline-block; }
     if (!rows.length) { el.innerHTML = `<p class="empty-note">${emptyText}</p>`; return; }
     const max = Math.max(...rows.map(r => r.total));
     el.innerHTML = rows.map(r => `
-      <div class="brow"><div class="brow-top"><span>${esc(r.name)}</span><span class="num">${fmt(r.total)}${r.note ? " · " + r.note : ""}</span></div>
+      <div class="brow"><div class="brow-top"><span class="mth">${r.badge ? bankBadge(r.name) : ""}${esc(r.name)}</span><span class="num">${fmt(r.total)}${r.note ? " · " + r.note : ""}</span></div>
       <div class="bar"><i style="width:${((r.total - (r.pend || 0)) / max * 100).toFixed(1)}%"></i>${r.pend ? `<i class="pend" style="width:${(r.pend / max * 100).toFixed(1)}%"></i>` : ""}</div></div>`).join("");
   }
   function renderMethods(items) {
     const by = {};
     items.filter(i => i.kind === "fixed" || i.kind === "var").forEach(i => {
       const k = i.method || "Sem forma definida";
-      by[k] = by[k] || { name: k, total: 0, pend: 0 };
+      by[k] = by[k] || { name: k, total: 0, pend: 0, badge: !!i.method };
       by[k].total += i.amount; if (!i.paid) by[k].pend += i.amount;
     });
     const rows = Object.values(by).sort((a, b) => b.total - a.total).map(r => ({ ...r, note: r.pend ? `${fmt(r.pend)} a pagar` : "" }));
@@ -1097,7 +1138,7 @@ dialog.sheet .sheet-only { display: inline-block; }
             <span class="when${t.day ? "" : " none"}">${t.day ? `${pad(t.day)}/${state.month.slice(5)}` : "sem data"}</span>
             ${t.inst ? `<span class="tag inst">${esc(t.inst.replace("/", " de "))}</span>` : ""}
             ${t.renan ? `<span class="tag split">Renan ${t.renan === t.amount ? "paga tudo" : fmt(t.renan)}</span>` : ""}
-            <span class="tag">${esc(t.cat)}</span>${t.method ? `<span>${esc(t.method)}</span>` : ""}${SOURCES[t.src] ? `<span class="tag src">${SOURCES[t.src]}</span>` : ""}</div></div>
+            <span class="tag">${esc(t.cat)}</span>${t.method ? `<span class="mth">${bankBadge(t.method)}${esc(t.method)}</span>` : ""}${SOURCES[t.src] ? `<span class="tag src">${SOURCES[t.src]}</span>` : ""}</div></div>
           <span class="amt num">${KINDS[kind].sign}${fmt(t.amount)}${t.renan ? `<small>sua parte ${fmt(own(t))}</small>` : ""}</span>
           <button class="pill ${t.paid ? "ok" : "pend"}" data-toggle="${t.id}" title="Clique para alternar">${t.paid ? okLabel : pendLabel}</button>
           <span class="ops">
@@ -1249,7 +1290,7 @@ dialog.sheet .sheet-only { display: inline-block; }
           const sorted = list.slice().sort((a, b) => b.amount - a.amount);
           return `<details class="cards"><summary class="crow${st === "true" ? " done" : ""}">
             <button type="button" class="tick" role="checkbox" aria-checked="${st}" aria-label="Fatura ${esc(name)} paga" data-cyc-card="${esc(name)}">${st === "true" ? "✓" : st === "mixed" ? "–" : ""}</button>
-            <div><div class="name">Fatura ${esc(name)}</div><div class="meta">${list.length} lançamentos${renanOf(list) ? ` · Renan ${fmt(renanOf(list))}` : ""} · <span class="more">ver itens</span></div></div>
+            <div><div class="name mth">${bankBadge(name)}${esc(cardLabel(name))}</div><div class="meta">${/renan/i.test(name) ? "Você manda o dinheiro e ele paga a fatura · " : ""}${list.length} ${list.length === 1 ? "lançamento" : "lançamentos"}${renanOf(list) ? ` · Renan ${fmt(renanOf(list))}` : ""} · <span class="more">ver itens</span></div></div>
             <span class="amt">${fmt(full(list))}</span></summary>
             <div class="sublist">${sorted.map(i => `<div class="srow"><span>${i.day ? pad(i.day) + "/" + M.slice(5) + " · " : ""}${esc(i.desc)}${i.inst ? " (" + esc(i.inst) + ")" : ""}</span><span class="num">${fmt(i.amount)}</span></div>`).join("")}</div></details>`;
         }).join("") + `</div>`;
@@ -1659,7 +1700,15 @@ dialog.sheet .sheet-only { display: inline-block; }
   resetForm();
   render();
   downloads = { save: async ({ filename, data }) => saveFile(filename, data) };
-  LCVault.boot({ onData, onSettings, onStatus: setSync }).then((s) => { store = s; render(); });
+  async function splitThaisCard() {
+    let n = 0;
+    for (const m of Object.keys(state.months)) {
+      if (!itemsOf(m).some(i => i.method === "Crédito Thais")) continue;
+      await save(m, itemsOf(m).map(i => i.method === "Crédito Thais" ? (n++, { ...i, method: "Crédito Thais Itaú" }) : i));
+    }
+    if (n) toast(`Separei os cartões: ${n} lançamentos foram para o Itaú. Mova os do Mercado Pago em Editar.`);
+  }
+  LCVault.boot({ onData, onSettings, onStatus: setSync }).then((s) => { store = s; render(); splitThaisCard(); });
 })();
 </script>
 <script>

@@ -122,7 +122,7 @@
           if (!(v > 0)) { if (row[cVal] != null && row[cVal] !== 0) skipped++; continue; }
           const desc = String(row[cTipo]).trim();
           items.push({ id: `xl-${ym}-${kind}-${r}`, kind, desc, amount: v, cat: guessCat(desc, cCat >= 0 ? row[cCat] : null),
-            method: row[cForma] ? String(row[cForma]).trim() : null, day: null,
+            method: row[cForma] ? (norm(row[cForma]) === "credito thais" ? "Crédito Thais Itaú" : String(row[cForma]).trim()) : null, day: null,
             paid: parseStatus(cStat >= 0 ? row[cStat] : null, ym, todayYM), inst: cParc >= 0 ? parcela(XLSX, row[cParc]) : null, src: "xlsx" });
         }
       });

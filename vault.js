@@ -389,6 +389,8 @@
     autoLock();
     return Object.assign(store, {
       secret: () => s.secret,
+      // código curto do cofre, para comparar aparelhos
+      vaultTag: () => s.vault.slice(0, 4).toUpperCase(),
       linkUrl: () => location.origin + location.pathname + "#chave=" + s.secret,
       async changePin() {
         const pin = await choosePin("Crie um PIN novo");

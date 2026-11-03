@@ -265,6 +265,7 @@ html.locked body { overflow: hidden; }
 <dialog id="settings" class="box" aria-labelledby="setTitle">
   <div class="rep">
     <div class="panel-head"><h2 id="setTitle">Configurações</h2><button class="icon-btn" id="setClose" type="button">Fechar</button></div>
+    <p class="where" id="vaultTag"></p>
     <section class="set-sec">
       <h3>Conectar outro aparelho</h3>
       <p class="hint">No celular, aponte a câmera para o código. No computador, copie o link e abra no navegador. Quem tiver esse código ou link acessa seus dados, então não mande para ninguém.</p>
@@ -652,6 +653,7 @@ html.locked body { overflow: hidden; }
     if (!store) return;
     $("recShow").hidden = true; $("backupBox").hidden = true; $("discMsg").textContent = ""; disarm = false; $("disconnect").textContent = "Desconectar este aparelho";
     $("closingList").innerHTML = Object.values(CARDS).map((m, n) => `<label class="close-row" for="cl${n}"><span>${badge(m)}${cardName(m)}</span><span>fecha dia <input id="cl${n}" data-card-close="${esc(m)}" inputmode="numeric" maxlength="2" value="${closingDay(m)}"></span></label>`).join("");
+    $("vaultTag").innerHTML = `Este aparelho está no <b>cofre ${store.vaultTag()}</b>. Todos os seus aparelhos precisam mostrar o mesmo número para ter os mesmos dados.`;
     const acc = store.account();
     $("accName").value = acc || "";
     $("accHint").innerHTML = acc ? `Num aparelho novo, toque em <b>Já uso o Livro-Caixa: entrar</b> e digite <b>${esc(acc)}</b> e o seu PIN.` : "Escolha um nome. Num aparelho novo, você entra só com ele e o seu PIN.";

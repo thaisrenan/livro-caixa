@@ -1015,15 +1015,24 @@ dialog.sheet .sheet-only { display: inline-block; }
   }
 
   // ---------- acerto com o Renan ----------
-  const owedBefore = (ym) => Object.keys(state.months).filter(m => m < ym).reduce((a, m) => { const t = totals(itemsOf(m)); return a + t.renan - t.settle; }, 0);
+  // a parte do Renan só vira dívida no dia em que você paga a conta: no salário da fatura ou da conta,
+  // no salário anterior para contas adiantadas, ou no dia da compra no débito e PIX
+  function payDate(i, ym) {
+    if (i.kind === "settle" || (i.kind === "var" && !isCard(i))) return new Date(+ym.slice(0, 4), +ym.slice(5) - 1, i.day || 1);
+    return lastBizDay(isAdvance(i) ? shiftMonth(ym, -1) : ym);
+  }
+  const isDue = (i, ym) => payDate(i, ym) <= today0();
+  // saldo com o Renan de tudo o que já venceu, nos meses antes de `ym`
+  const owedBefore = (ym) => Object.keys(state.months).filter(m => m < ym).reduce((a, m) => a + itemsOf(m).reduce((b, i) => !isDue(i, m) ? b : i.kind === "settle" ? b - i.amount : b + (i.renan || 0), 0), 0);
   function renderRenan(t) {
     const owed = owedBefore("9999-99");
     $("owedTotal").textContent = fmt(Math.abs(owed));
     $("owedLabel").textContent = owed < 0 ? "Você deve ao Renan" : "O Renan te deve, no total";
     $("owedTotal").className = "val num " + (owed > 0 ? "v-in" : owed < 0 ? "v-out" : "");
-    $("owedSub").textContent = t.renan || t.settle
+    const upcoming = Object.keys(state.months).reduce((a, m) => a + itemsOf(m).reduce((b, i) => i.kind !== "settle" && i.renan && !isDue(i, m) ? b + i.renan : b, 0), 0);
+    $("owedSub").textContent = (t.renan || t.settle
       ? `Neste mês: ${fmt(t.renan)} em gastos divididos` + (t.settle ? `, ${fmt(t.settle)} já pagos por ele` : "")
-      : "Nenhum gasto dividido neste mês. Use “Dividir” em uma despesa.";
+      : "Nenhum gasto dividido neste mês. Use “Dividir” em uma despesa.") + (upcoming ? ` · Só conta o que você já pagou: mais ${fmt(upcoming)} entram quando as próximas contas vencerem.` : "");
   }
   $("settleForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1040,9 +1049,11 @@ dialog.sheet .sheet-only { display: inline-block; }
     const isAll = period === "all";
     const yms = Object.keys(state.months).sort().filter(m => isAll || m === period);
     const prev = isAll ? 0 : owedBefore(period);
-    const when = (i, ym) => i.day ? `${pad(i.day)}/${ym.slice(5)}` : shortMonth(ym) + "/" + ym.slice(2, 4);
+    // data em que você pagou: dia do salário para cartões e contas, dia da compra no débito e PIX
+    const when = (i, ym) => { const d = payDate(i, ym); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`; };
     const items = [], pays = [];
     for (const ym of yms) for (const i of itemsOf(ym)) {
+      if (!isDue(i, ym)) continue;
       if (i.kind === "settle") pays.push({ ...i, when: when(i, ym) });
       else if (i.renan) items.push({ ...i, when: when(i, ym) });
     }
@@ -1074,7 +1085,7 @@ dialog.sheet .sheet-only { display: inline-block; }
     $("repSave").hidden = !downloads;
   }
   $("reportBtn").addEventListener("click", () => {
-    const ms = Object.keys(state.months).filter(m => itemsOf(m).some(i => i.renan || i.kind === "settle")).sort().reverse();
+    const ms = Object.keys(state.months).filter(m => itemsOf(m).some(i => (i.renan || i.kind === "settle") && isDue(i, m))).sort().reverse();
     if (!ms.includes(state.month)) ms.unshift(state.month);
     $("repPeriod").innerHTML = ms.map(m => `<option value="${m}"${m === state.month ? " selected" : ""}>${esc(monthName(m))}</option>`).join("") + `<option value="all">Todo o histórico</option>`;
     showReport();

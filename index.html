@@ -223,6 +223,7 @@ html.locked body { overflow: hidden; }
       <span class="hint">O Renan te deve hoje</span>
       <span class="owed num" id="owed">—</span>
       <span class="hint" id="owedSub"></span>
+      <div id="renanLists"></div>
       <div class="row" id="paidForm" hidden>
         <div class="field money" style="flex:1"><b>R$</b><input id="paidVal" inputmode="decimal" placeholder="0,00" aria-label="Quanto o Renan te pagou" autocomplete="off"></div>
         <button class="btn primary" id="paidSave" type="button">Salvar</button>
@@ -428,19 +429,30 @@ html.locked body { overflow: hidden; }
     return lastBizDay(isAdvance(i) ? shiftMonth(ym, -1) : ym);
   }
   function renanLedger() {
-    const t0 = today0(), owedItems = [], pays = [];
+    const t0 = today0(), due = [], pays = [], upcoming = [];
     for (const ym of Object.keys(state.months).sort()) for (const i of itemsOf(ym)) {
-      const d = payDate(i, ym);
-      if (d > t0) continue;
-      if (i.kind === "settle") pays.push({ i, d }); else if (i.renan) owedItems.push({ i, d });
+      if (i.kind !== "settle" && !i.renan) continue;
+      const d = payDate(i, ym), x = { i, d, ym };
+      if (i.kind === "settle") { if (d <= t0) pays.push(x); }
+      else (d <= t0 ? due : upcoming).push(x);
     }
-    const owed = owedItems.reduce((a, x) => a + x.i.renan, 0), paid = pays.reduce((a, x) => a + x.i.amount, 0);
-    return { owedItems, pays, owed, paid, total: owed - paid };
+    due.sort((a, b) => a.d - b.d); upcoming.sort((a, b) => a.d - b.d); pays.sort((a, b) => b.d - a.d);
+    const owed = due.reduce((a, x) => a + x.i.renan, 0), paid = pays.reduce((a, x) => a + x.i.amount, 0);
+    let rest = paid;
+    for (const x of due) { const cover = Math.min(rest, x.i.renan); rest -= cover; x.left = x.i.renan - cover; }
+    return { due, pending: due.filter(x => x.left > 0), pays, upcoming, owed, paid, total: owed - paid };
   }
   function renderRenan() {
     const L = renanLedger();
     $("owed").textContent = fmt(Math.max(0, L.total));
-    $("owedSub").textContent = L.total < 0 ? `Ele te pagou ${fmt(-L.total)} a mais.` : L.paid ? `Contas divididas ${fmt(L.owed)} · ele já pagou ${fmt(L.paid)}` : "Só entra o que você já pagou.";
+    $("owedSub").textContent = L.total < 0 ? `Ele te pagou ${fmt(-L.total)} a mais.` : L.pending.length ? `${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"}. Toque numa conta para corrigir.` : "Nada pendente.";
+    const share = (i) => i.renan === i.amount ? `tudo dele, de ${fmt(i.amount)}` : i.renan === Math.round(i.amount / 2) ? `metade de ${fmt(i.amount)}` : `parte de ${fmt(i.amount)}`;
+    const line = ({ i, d, ym, left }) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${ddmm(d)} · ${esc(i.desc)}</div><div class="meta">${left != null && left < i.renan ? `falta ${fmt(left)} · ` : ""}${share(i)}</div></div><span class="val num">${fmt(left != null ? left : i.renan)}</span></div>`;
+    const group = (key, title, list, body) => !list.length ? "" : `<div class="line nocheck tap" data-toggle="${key}"><div class="name">${title}</div><span class="meta">${state.open[key] ? "fechar" : "ver"}</span></div>${state.open[key] ? `<div class="sublist">${body}</div>` : ""}`;
+    let h = L.pending.length ? `<div class="flabel" style="margin-top:4px">Pendente</div>${L.pending.map(line).join("")}` : "";
+    h += group("pays", `Pagamentos dele (${fmt(L.paid)})`, L.pays, L.pays.map(({ i, d, ym }) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${ddmm(d)} · Pagamento do Renan</div><div class="meta">toque para corrigir</div></div><span class="val num">${fmt(i.amount)}</span></div>`).join(""));
+    h += group("upcoming", `Ainda vai vencer (${fmt(L.upcoming.reduce((a, x) => a + x.i.renan, 0))})`, L.upcoming, L.upcoming.map(line).join(""));
+    $("renanLists").innerHTML = h;
   }
   $("paidBtn").addEventListener("click", () => { $("paidForm").hidden = !$("paidForm").hidden; if (!$("paidForm").hidden) $("paidVal").focus(); });
   $("paidSave").addEventListener("click", () => {
@@ -452,9 +464,8 @@ html.locked body { overflow: hidden; }
   });
   $("reportBtn").addEventListener("click", () => {
     const L = renanLedger();
-    const lines = L.owedItems.map(({ i, d }) => `• ${ddmm(d)} ${i.desc}: ${fmt(i.renan)}`);
-    let text = `*Acerto Renan*\n\n${lines.join("\n") || "Nenhuma conta dividida."}\nSubtotal: ${fmt(L.owed)}\n`;
-    if (L.paid) text += `\nVocê já me pagou: −${fmt(L.paid)}\n`;
+    const lines = L.pending.map(({ i, d, left }) => `• ${ddmm(d)} ${i.desc}: ${left < i.renan ? `falta ${fmt(left)} de ${fmt(i.renan)}` : fmt(left)}`);
+    let text = `*Acerto Renan*\n\n${lines.join("\n") || "Nada pendente."}\n`;
     text += `\n*${L.total >= 0 ? `Total que você me deve: ${fmt(L.total)}` : `Eu te devo: ${fmt(-L.total)}`}*`;
     navigator.clipboard.writeText(text).then(() => toast("Resumo copiado. É só colar no WhatsApp."), () => toast("Não consegui copiar."));
   });
@@ -485,12 +496,14 @@ html.locked body { overflow: hidden; }
   const closingDay = (m) => (state.settings.closing && state.settings.closing[m]) || 25;
   const nextPayday = () => { const t = today0(); const p = lastBizDay(ymOf(t)); return t <= p ? p : lastBizDay(shiftMonth(ymOf(t), 1)); };
   const howOf = (i) => /ita[uú]/i.test(i.method || "") ? "itau" : /mercado ?pago/i.test(i.method || "") ? "mp" : /renan/i.test(i.method || "") ? "renan" : i.kind === "fixed" ? "boleto" : "debito";
-  const kindOf = (i) => i.kind === "in" ? "entrada" : i.kind === "fixed" ? "conta" : "gasto";
+  const kindOf = (i) => i.kind === "settle" ? "settle" : i.kind === "in" ? "entrada" : i.kind === "fixed" ? "conta" : "gasto";
 
   function syncForm() {
+    const settle = form.kind === "settle";
+    document.querySelector(".seg").hidden = settle; $("fDesc").closest(".field").hidden = settle;
     document.querySelectorAll(".seg [data-kind]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.kind === form.kind)));
     const hows = HOWS[form.kind];
-    $("rowHow").hidden = !hows; $("rowSplit").hidden = form.kind === "entrada";
+    $("rowHow").hidden = !hows; $("rowSplit").hidden = form.kind === "entrada" || settle;
     if (hows) {
       if (!hows.some(h => h[0] === form.how)) form.how = hows[0][0];
       $("fHow").innerHTML = hows.map(([k, t]) => `<button type="button" data-how="${k}" aria-pressed="${k === form.how}">${t}</button>`).join("");
@@ -507,6 +520,7 @@ html.locked body { overflow: hidden; }
     const v = $("fDate").value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
     const d = new Date(v + "T00:00");
+    if (form.kind === "settle") return { ym: ymOf(d), d, text: `O Renan te pagou em ${ddmm(d)}.` };
     if (form.editing && v === form.editDate) return { ym: form.editing.ym, d, text: "Continua no mesmo lugar." };
     if (form.kind === "entrada") { const ym = salaryMonthOf(d); return { ym, d, text: `Entra no dinheiro de ${monthOnly(shiftMonth(ym, 1))}.` }; }
     if (HOWS[form.kind] && CARDS[form.how]) {
@@ -532,7 +546,7 @@ html.locked body { overflow: hidden; }
       // sem data guardada, mostra o dia em que ele é pago, sem mudar o lugar
       $("fDate").value = i.day ? `${i.pm || ym}-${pad(i.day)}` : isoOf(i.kind === "var" && !isCard(i) ? new Date(+ym.slice(0, 4), +ym.slice(5) - 1, 1) : lastBizDay(isAdvance(i) ? shiftMonth(ym, -1) : ym));
       form.editDate = $("fDate").value;
-      $("fTitle").textContent = "Editar"; $("fDel").hidden = false; $("fDel").textContent = "Excluir"; delArmed = false;
+      $("fTitle").textContent = i.kind === "settle" ? "Pagamento do Renan" : "Editar"; $("fDel").hidden = false; $("fDel").textContent = "Excluir"; delArmed = false;
     } else {
       $("form").reset();
       form.split = "0";
@@ -544,6 +558,7 @@ html.locked body { overflow: hidden; }
   }
   $("fab").addEventListener("click", () => { form.kind = "gasto"; form.how = "debito"; openForm(); setTimeout(() => $("fDesc").focus(), 50); });
   $("fClose").addEventListener("click", () => $("sheet").close());
+  $("sheet").addEventListener("close", () => { document.querySelector(".seg").hidden = false; $("fDesc").closest(".field").hidden = false; });
   $("sheet").addEventListener("click", (e) => { if (e.target === $("sheet")) $("sheet").close(); });
   document.querySelector(".seg").addEventListener("click", (e) => {
     const b = e.target.closest("[data-kind]"); if (!b) return;
@@ -563,6 +578,14 @@ html.locked body { overflow: hidden; }
 
   $("form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (form.kind === "settle") {
+      const amount = parseAmount($("fVal").value), p = placement();
+      if (!(amount > 0) || !p || !store) { $("fMsg").textContent = "Digite o valor e a data."; return; }
+      const { ym, item } = form.editing, merged = { ...item, amount, day: p.d.getDate() };
+      if (p.ym === ym) await save(ym, itemsOf(ym).map(i => i.id === item.id ? merged : i));
+      else { await save(ym, itemsOf(ym).filter(i => i.id !== item.id)); await save(p.ym, itemsOf(p.ym).concat(merged)); }
+      $("sheet").close(); toast("Pagamento corrigido."); return;
+    }
     const desc = $("fDesc").value.trim(), amount = parseAmount($("fVal").value), p = placement();
     if (!desc) { $("fMsg").textContent = "Escreva o que foi."; $("fDesc").focus(); return; }
     if (!(amount > 0)) { $("fMsg").textContent = "Digite o valor, por exemplo 25,90."; $("fVal").focus(); return; }

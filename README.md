@@ -11,7 +11,8 @@ App instalável (PWA) que roda no GitHub Pages, com dados sincronizados pelo Sup
   repositório nunca veem os lançamentos.
 - O banco só aceita as funções `lc_get` e `lc_put`, que exigem o identificador e o token do cofre,
   ambos derivados da chave.
-- Para conectar outro aparelho: Configurações → Conectar outro aparelho (QR code ou link).
+- Para conectar outro aparelho: entrar com nome e PIN (o servidor guarda a chave criptografada com o
+  PIN e trava depois de 5 erros por 1 hora, e de vez depois de 20), ou pelo QR code em Configurações.
 - O código de recuperação mostrado na primeira vez é a única forma de recuperar os dados se
   todos os aparelhos forem perdidos.
 
@@ -24,6 +25,7 @@ App instalável (PWA) que roda no GitHub Pages, com dados sincronizados pelo Sup
 | `importer.js` | Importação da planilha de controle financeiro |
 | `config.js` | Endereço e chave pública do Supabase |
 | `supabase.sql` | Tabelas e funções do banco (rodar uma vez no SQL Editor) |
+| `supabase-nome-pin.sql` | Entrada com nome e PIN em aparelhos novos (rodar depois do anterior) |
 | `sw.js`, `manifest.webmanifest`, ícones | Instalação no celular e uso sem internet |
 | `qrcode.js` | Gerador de QR code (Kazuhiko Arase, licença MIT) |
 

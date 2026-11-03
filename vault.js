@@ -76,6 +76,33 @@
     return r.json();
   }
 
+  // ---------- nome + PIN: a chave fica no servidor, criptografada com o PIN ----------
+  const normName = (n) => String(n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/\s+/g, ".");
+  const validName = (n) => /^[a-z0-9._-]{3,30}$/.test(n);
+  const concat = (a, b) => { const u = new Uint8Array(a.length + b.length); u.set(a); u.set(b, a.length); return u; };
+  async function accountKeys(pin, saltB64) {
+    const salt = unb64(saltB64);
+    const base = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveBits", "deriveKey"]);
+    const auth = hex(await crypto.subtle.deriveBits({ name: "PBKDF2", salt: concat(salt, enc.encode("auth")), iterations: 200000, hash: "SHA-256" }, base, 256));
+    const wrapKey = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: concat(salt, enc.encode("wrap")), iterations: 200000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    return { auth, wrapKey };
+  }
+  async function registerAccount(s, name, pin) {
+    const salt = b64(rand(16)), { auth, wrapKey } = await accountKeys(pin, salt), iv = rand(12);
+    const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, wrapKey, enc.encode(s.secret));
+    await rpc("lc_account_set", { p_name: name, p_vault: s.vault, p_token: s.token, p_salt: salt, p_pin_hash: auth, p_wrapped: JSON.stringify({ iv: b64(iv), ct: b64(ct) }) });
+    LS.set("account", name);
+  }
+  async function loginAccount(name, pin) {
+    const salt = await rpc("lc_account_salt", { p_name: name });
+    if (!salt) return { error: "unknown" };
+    const { auth, wrapKey } = await accountKeys(pin, salt);
+    const r = await rpc("lc_account_login", { p_name: name, p_pin_hash: auth });
+    if (r.error) return r;
+    const w = JSON.parse(r.wrapped);
+    return { secret: dec.decode(await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(w.iv) }, wrapKey, unb64(w.ct))) };
+  }
+
   // ---------- armazenamento sincronizado ----------
   function makeStore(s, hooks) {
     let cache = LS.get("cache") || {};     // doc -> {iv, data, deleted, ts} como está no servidor
@@ -239,10 +266,44 @@
     return new Promise((resolve) => {
       screen(`<div class="lock-logo" aria-hidden="true">R$</div><h1 class="lock-title">Livro-Caixa</h1>
         <p class="lock-sub">Seu controle de receitas, despesas e reserva. Os dados ficam criptografados e sincronizados entre os seus aparelhos.</p>
-        <div class="lock-actions col"><button type="button" class="btn primary" id="frNew">Começar</button><button type="button" class="btn" id="frLink">Já uso em outro aparelho</button></div>`);
+        <div class="lock-actions col"><button type="button" class="btn primary" id="frLogin">Já uso o Livro-Caixa: entrar</button><button type="button" class="btn" id="frNew">Começar do zero</button></div>`);
       $("frNew").onclick = () => resolve("new");
-      $("frLink").onclick = () => resolve("link");
+      $("frLogin").onclick = () => resolve("login");
     });
+  }
+
+  // entrar num aparelho novo: nome e PIN; resolve com a chave, ou null para voltar
+  async function loginFlow() {
+    while (true) {
+      const name = await new Promise((resolve) => {
+        screen(`<h1 class="lock-title">Entrar</h1>
+          <p class="lock-sub">Digite o nome que você escolheu no app, em ⚙ → Entrar com nome e PIN.</p>
+          <input id="lgName" class="lock-text" autocomplete="username" autocapitalize="none" placeholder="Seu nome no app" value="${(LS.get("lastName") || "").replace(/"/g, "")}">
+          <p class="lock-msg" id="lgMsg" role="alert">${loginFlow.msg || ""}</p>
+          <div class="lock-actions col"><button type="button" class="btn primary" id="lgGo">Continuar</button><button type="button" class="btn" id="lgCode">Usar link ou código de recuperação</button><button type="button" class="btn" id="lgBack">Voltar</button></div>`);
+        loginFlow.msg = "";
+        const go = () => { const n = normName($("lgName").value); if (validName(n)) resolve(n); else $("lgMsg").textContent = "Use de 3 a 30 letras ou números."; };
+        $("lgGo").onclick = go;
+        $("lgName").onkeydown = (e) => { if (e.key === "Enter") go(); };
+        $("lgCode").onclick = () => resolve("#code");
+        $("lgBack").onclick = () => resolve(null);
+        setTimeout(() => $("lgName") && $("lgName").focus(), 50);
+      });
+      if (!name) return null;
+      if (name === "#code") { const s = await pasteKeyScreen(); if (s) return { secret: s, pin: await choosePin("Crie um PIN para este aparelho") }; continue; }
+      LS.set("lastName", name);
+      let r = await askPin({ title: "Digite seu PIN", sub: name });
+      while (true) {
+        let res;
+        try { res = await loginAccount(name, r.pin); } catch (e) { r = await r.again("Sem conexão com o servidor. Confira a internet e digite de novo."); continue; }
+        if (res.secret) return { secret: res.secret, pin: r.pin, name };
+        if (res.error === "unknown") { loginFlow.msg = `Não achei o nome "${name}". Confira como você salvou.`; break; }
+        if (res.error === "wrong") { r = await r.again(`PIN incorreto. ${res.left === 1 ? "Mais 1 erro trava" : `Mais ${res.left} erros travam`} por 1 hora.`); continue; }
+        if (res.error === "locked") { r = await r.again(`Muitas tentativas. Tente de novo em ${res.minutes} minutos.`); continue; }
+        if (res.error === "blocked") { loginFlow.msg = "A entrada com nome e PIN foi travada por segurança. Use o código de recuperação, ou abra o app num aparelho já conectado e salve o nome de novo em ⚙."; break; }
+        r = await r.again("Não consegui entrar. Tente de novo.");
+      }
+    }
   }
 
   function throttleWait() {
@@ -314,8 +375,8 @@
           await recoveryScreen(s);
           secret = s;
         } else {
-          const s = await pasteKeyScreen();
-          if (s) { const pin = await choosePin("Crie um PIN para este aparelho"); await wrapSecret(s, pin); secret = s; }
+          const got = await loginFlow();
+          if (got) { resetLocal(); await wrapSecret(got.secret, got.pin); if (got.name) LS.set("account", got.name); secret = got.secret; }
         }
       }
     }
@@ -324,17 +385,37 @@
     const s = await openSession(secret);
     const store = makeStore(s, hooks);
     await store.start();
+    const sync = () => store.sync();
     autoLock();
     return Object.assign(store, {
       secret: () => s.secret,
       linkUrl: () => location.origin + location.pathname + "#chave=" + s.secret,
-      async changePin() { const pin = await choosePin("Crie um PIN novo"); await wrapSecret(s.secret, pin); closeLock(); document.onkeydown = null; },
+      async changePin() {
+        const pin = await choosePin("Crie um PIN novo");
+        await wrapSecret(s.secret, pin);
+        closeLock(); document.onkeydown = null;
+        // o PIN de entrada em outros aparelhos acompanha o PIN novo
+        if (LS.get("account")) { try { await registerAccount(s, LS.get("account"), pin); } catch (e) { return "account-failed"; } }
+      },
+      account: () => LS.get("account"),
+      normName,
+      // salva o nome para entrar em outros aparelhos; pede o PIN deste aparelho para confirmar
+      async setAccount(raw) {
+        const name = normName(raw);
+        if (!validName(name)) return "invalid";
+        let r = await askPin({ title: "Confirme seu PIN", sub: `Para entrar como ${name} em outros aparelhos` });
+        while (!(await unwrapSecret(r.pin))) r = await r.again("PIN incorreto.");
+        screen(`<h1 class="lock-title">Salvando…</h1>`);
+        try { await sync(); await registerAccount(s, name, r.pin); return "ok"; }
+        catch (e) { return /taken/.test(e.body || "") ? "taken" : "error"; }
+        finally { closeLock(); document.onkeydown = null; }
+      },
       async lockNow() { await relock(); },
       disconnect() { resetLocal(); location.reload(); },
     });
   }
 
-  function resetLocal() { ["wrapped", "cache", "pending", "since", "fails"].forEach(LS.del); }
+  function resetLocal() { ["wrapped", "cache", "pending", "since", "fails", "account"].forEach(LS.del); }
 
   async function relock() {
     let r = await askPin({ title: "Digite seu PIN", sub: "Livro-Caixa" });

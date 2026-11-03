@@ -278,6 +278,11 @@ html.locked body { overflow: hidden; }
       <code class="recovery" id="recShow" hidden></code>
     </section>
     <section class="set-sec">
+      <h3>Entrar com nome e PIN</h3>
+      <p class="hint" id="accHint"></p>
+      <div class="row"><input id="accName" class="lock-text" style="flex:1" autocomplete="off" autocapitalize="none" placeholder="Ex.: thais" aria-label="Seu nome no app"><button class="btn" id="accSave" type="button">Salvar</button></div>
+    </section>
+    <section class="set-sec">
       <h3>Instalar no celular</h3>
       <p class="hint"><b>iPhone:</b> no Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”. <b>Android:</b> no Chrome, toque no menu ⋮ e depois em “Instalar app”.</p>
     </section>
@@ -649,6 +654,9 @@ html.locked body { overflow: hidden; }
     if (!store) return;
     $("recShow").hidden = true; $("backupBox").hidden = true; $("discMsg").textContent = ""; disarm = false; $("disconnect").textContent = "Desconectar este aparelho";
     $("closingList").innerHTML = Object.values(CARDS).map((m, n) => `<label class="close-row" for="cl${n}"><span>${badge(m)}${cardName(m)}</span><span>fecha dia <input id="cl${n}" data-card-close="${esc(m)}" inputmode="numeric" maxlength="2" value="${closingDay(m)}"></span></label>`).join("");
+    const acc = store.account();
+    $("accName").value = acc || "";
+    $("accHint").innerHTML = acc ? `Num aparelho novo, toque em <b>Já uso o Livro-Caixa: entrar</b> e digite <b>${esc(acc)}</b> e o seu PIN.` : "Escolha um nome. Num aparelho novo, você entra só com ele e o seu PIN.";
     $("settings").showModal();
     $("qr").innerHTML = ""; $("qr").hidden = false;
     try { await loadScript("qrcode.js"); const q = qrcode(0, "M"); q.addData(store.linkUrl()); q.make(); $("qr").innerHTML = q.createSvgTag({ cellSize: 5, margin: 2, scalable: true }); }
@@ -676,8 +684,15 @@ html.locked body { overflow: hidden; }
     box.querySelector("[data-cancel]").onclick = () => { box.hidden = true; };
     box.querySelector("[data-go]").onclick = async () => { try { await store.importAll(data); box.textContent = "Pronto, backup restaurado."; } catch (err) { box.textContent = "Não consegui restaurar esse arquivo."; } };
   });
+  $("accSave").addEventListener("click", async () => {
+    const raw = $("accName").value;
+    if (!raw.trim()) { toast("Escreva um nome, por exemplo thais."); return; }
+    $("settings").close();
+    const r = await store.setAccount(raw);
+    toast(r === "ok" ? `Pronto. Em outro aparelho, entre com "${store.normName(raw)}" e o seu PIN.` : r === "taken" ? "Esse nome já é usado por outra pessoa. Escolha outro." : r === "invalid" ? "Use de 3 a 30 letras ou números, sem espaços." : "Não consegui salvar. Confira a internet e tente de novo.");
+  });
   $("lockNow").addEventListener("click", () => { $("settings").close(); store.lockNow(); });
-  $("changePin").addEventListener("click", async () => { $("settings").close(); await store.changePin(); toast("PIN alterado."); });
+  $("changePin").addEventListener("click", async () => { $("settings").close(); const r = await store.changePin(); toast(r === "account-failed" ? "PIN alterado neste aparelho. Para os outros aparelhos, salve o nome de novo em ⚙." : "PIN alterado."); });
   $("syncNow").addEventListener("click", () => store.sync());
   $("disconnect").addEventListener("click", () => {
     if (!disarm) { disarm = true; $("discMsg").textContent = "Este aparelho vai esquecer a chave. Para voltar, você vai precisar de outro aparelho conectado ou do código de recuperação. Toque de novo para confirmar."; $("disconnect").textContent = "Confirmar"; return; }

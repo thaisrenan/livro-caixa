@@ -557,14 +557,26 @@ html.locked body { overflow: hidden; }
   function renderBalance() {
     const L = renanLedger();
     const owes = oweList(), open = owes.filter(x => !x.i.owePaid), done = owes.filter(x => x.i.owePaid);
-    const his = Math.max(0, L.total), mine = full(open.map(x => x.i)), net = his - mine;
+    // cartão do Renan: fatura já vencida e ainda não marcada como paga em "Contas do dia" é dinheiro que você deve mandar a ele
+    const t0 = today0(), cardDue = [];
+    for (const ym of Object.keys(state.months).sort()) {
+      const d = lastBizDay(ym);
+      // só os últimos 2 meses: o histórico da planilha tem faturas antigas sem a marca de pago
+      if (d > t0 || days(d, t0) > 62) continue;
+      const unpaid = itemsOf(ym).filter(i => (i.kind === "fixed" || i.kind === "var") && i.method === CARDS.renan && !i.paid);
+      if (unpaid.length) cardDue.push({ ym, d, amount: full(unpaid), n: unpaid.length });
+    }
+    const his = Math.max(0, L.total), mine = full(open.map(x => x.i)) + cardDue.reduce((a, x) => a + x.amount, 0), net = his - mine;
+    const nMine = open.length + cardDue.length;
     const tickOwe = ({ i, d, ym }) => `<div class="line${i.owePaid ? " done" : ""}"><button type="button" class="tick" role="checkbox" aria-checked="${!!i.owePaid}" aria-label="Paguei ${esc(i.desc)} ao Renan" data-opaid="${ym}|${i.id}">${i.owePaid ? "✓" : ""}</button>
         <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${ddmm(d)} · ${esc(i.desc)}</div><div class="meta">${i.owePaid ? "você já pagou" : "toque no quadradinho quando pagar"}</div></div><span class="val num">${fmt(i.amount)}</span></div>`;
     const hisLines = L.pending.map(({ i, d, left }) => `<div class="line nocheck"><span class="name">${ddmm(d)} · ${esc(i.desc)}</span><span class="val num">${fmt(left)}</span></div>`).join("");
     let h = `<div class="line nocheck tap renan" data-toggle="balHis"><div><div class="name">Ele te deve</div><div class="meta">${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"} do acerto · ${state.open.balHis ? "fechar" : "ver quais"}</div></div><span class="val num">${fmt(his)}</span></div>`;
     if (state.open.balHis) h += `<div class="sublist">${hisLines || `<p class="empty">Nada pendente.</p>`}</div>`;
-    h += `<div class="line nocheck tap" data-toggle="balMine"><div><div class="name">Você deve a ele</div><div class="meta">${open.length} ${open.length === 1 ? "item" : "itens"} · ${state.open.balMine ? "fechar" : "ver quais"}</div></div><span class="val num" style="color:var(--out)">− ${fmt(mine)}</span></div>`;
-    if (state.open.balMine) h += `<div class="sublist">${open.map(tickOwe).join("") || `<p class="empty">Nada anotado. Use o botão abaixo.</p>`}${done.length ? `<div class="flabel" style="margin-top:8px">Já pagos</div>${done.map(tickOwe).join("")}` : ""}</div>`;
+    const cardLine = ({ ym, d, amount, n }) => `<div class="line"><button type="button" class="tick" role="checkbox" aria-checked="false" aria-label="Mandei o dinheiro do cartão do Renan de ${ddmm(d)}" data-cardpay="${ym}">${""}</button>
+        <div><div class="name">${ddmm(d)} · ${badge(CARDS.renan)}Cartão do Renan</div><div class="meta">${n} ${n === 1 ? "compra" : "compras"} · marque quando mandar o dinheiro</div></div><span class="val num">${fmt(amount)}</span></div>`;
+    h += `<div class="line nocheck tap" data-toggle="balMine"><div><div class="name">Você deve a ele</div><div class="meta">${nMine} ${nMine === 1 ? "item" : "itens"}${cardDue.length ? " (inclui o cartão dele)" : ""} · ${state.open.balMine ? "fechar" : "ver quais"}</div></div><span class="val num" style="color:var(--out)">− ${fmt(mine)}</span></div>`;
+    if (state.open.balMine) h += `<div class="sublist">${cardDue.map(cardLine).join("")}${open.map(tickOwe).join("")}${!nMine ? `<p class="empty">Nada pendente. O cartão do Renan entra aqui sozinho depois do dia do salário, até você marcar como pago.</p>` : ""}${done.length ? `<div class="flabel" style="margin-top:8px">Já pagos</div>${done.map(tickOwe).join("")}` : ""}</div>`;
     h += `<div class="line nocheck" style="border-top:2px solid var(--ink)"><div class="name">${net > 0 ? "Ele tem que te pagar" : net < 0 ? "Você tem que pagar a ele" : "Vocês estão quites"}</div><span class="val num" style="font-family:var(--font-display);font-size:1.3rem;color:${net >= 0 ? "var(--renan)" : "var(--out)"}">${fmt(Math.abs(net))}</span></div>`;
     $("balBox").innerHTML = h;
   }
@@ -572,6 +584,13 @@ html.locked body { overflow: hidden; }
 
   // ---------- cliques na tela ----------
   document.querySelector(".wrap").addEventListener("click", (e) => {
+    const cp = e.target.closest("[data-cardpay]");
+    if (cp) {
+      const ym = cp.dataset.cardpay;
+      save(ym, itemsOf(ym).map(i => (i.kind === "fixed" || i.kind === "var") && i.method === CARDS.renan ? { ...i, paid: true } : i));
+      toast(`Cartão do Renan de ${ddmm(lastBizDay(ym))}: pago. Também ficou marcado em Contas do dia.`);
+      return;
+    }
     const op = e.target.closest("[data-opaid]");
     if (op) {
       const [ym, id] = op.dataset.opaid.split("|"), it = itemsOf(ym).find(i => i.id === id);

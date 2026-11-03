@@ -249,6 +249,12 @@ html.locked body { overflow: hidden; }
       </div>
     </div>
   </section>
+
+  <section class="block" aria-labelledby="hBal">
+    <div class="block-head"><h2 id="hBal">Saldo com o Renan</h2></div>
+    <div id="balBox"></div>
+    <div class="row" style="padding:4px 0 8px"><button class="btn" id="oweAdd" type="button">+ O que eu devo a ele</button></div>
+  </section>
 </div>
 
 <button class="fab" id="fab" type="button">+ Lançar</button>
@@ -445,6 +451,7 @@ html.locked body { overflow: hidden; }
     $("descs").innerHTML = [...new Set(allItems().map(i => i.desc))].sort().map(d => `<option value="${esc(d)}">`).join("");
     renderRenan();
     renderReserve(v);
+    renderBalance();
   }
 
   // ---------- acerto com o Renan: só o que você já pagou ----------
@@ -528,8 +535,41 @@ html.locked body { overflow: hidden; }
   $("resIn").addEventListener("click", () => { form.kind = "guardar"; openForm(); });
   $("resOut").addEventListener("click", () => { form.kind = "retirar"; openForm(); });
 
+
+  // ---------- saldo com o Renan: o que ele te deve (pendente do acerto) menos o que você deve a ele ----------
+  function oweList() {
+    const t0 = today0(), out = [];
+    for (const ym of Object.keys(state.months).sort()) for (const i of itemsOf(ym)) {
+      if (i.kind !== "owe") continue;
+      const d = new Date(+ym.slice(0, 4), +ym.slice(5) - 1, i.day || 1);
+      if (d <= t0) out.push({ i, d, ym });
+    }
+    return out;
+  }
+  function renderBalance() {
+    const L = renanLedger();
+    const owes = oweList(), open = owes.filter(x => !x.i.owePaid), done = owes.filter(x => x.i.owePaid);
+    const his = Math.max(0, L.total), mine = full(open.map(x => x.i)), net = his - mine;
+    const tickOwe = ({ i, d, ym }) => `<div class="line${i.owePaid ? " done" : ""}"><button type="button" class="tick" role="checkbox" aria-checked="${!!i.owePaid}" aria-label="Paguei ${esc(i.desc)} ao Renan" data-opaid="${ym}|${i.id}">${i.owePaid ? "✓" : ""}</button>
+        <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${ddmm(d)} · ${esc(i.desc)}</div><div class="meta">${i.owePaid ? "você já pagou" : "toque no quadradinho quando pagar"}</div></div><span class="val num">${fmt(i.amount)}</span></div>`;
+    const hisLines = L.pending.map(({ i, d, left }) => `<div class="line nocheck"><span class="name">${ddmm(d)} · ${esc(i.desc)}</span><span class="val num">${fmt(left)}</span></div>`).join("");
+    let h = `<div class="line nocheck tap renan" data-toggle="balHis"><div><div class="name">Ele te deve</div><div class="meta">${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"} do acerto · ${state.open.balHis ? "fechar" : "ver quais"}</div></div><span class="val num">${fmt(his)}</span></div>`;
+    if (state.open.balHis) h += `<div class="sublist">${hisLines || `<p class="empty">Nada pendente.</p>`}</div>`;
+    h += `<div class="line nocheck tap" data-toggle="balMine"><div><div class="name">Você deve a ele</div><div class="meta">${open.length} ${open.length === 1 ? "item" : "itens"} · ${state.open.balMine ? "fechar" : "ver quais"}</div></div><span class="val num" style="color:var(--out)">− ${fmt(mine)}</span></div>`;
+    if (state.open.balMine) h += `<div class="sublist">${open.map(tickOwe).join("") || `<p class="empty">Nada anotado. Use o botão abaixo.</p>`}${done.length ? `<div class="flabel" style="margin-top:8px">Já pagos</div>${done.map(tickOwe).join("")}` : ""}</div>`;
+    h += `<div class="line nocheck" style="border-top:2px solid var(--ink)"><div class="name">${net > 0 ? "Ele tem que te pagar" : net < 0 ? "Você tem que pagar a ele" : "Vocês estão quites"}</div><span class="val num" style="font-family:var(--font-display);font-size:1.3rem;color:${net >= 0 ? "var(--renan)" : "var(--out)"}">${fmt(Math.abs(net))}</span></div>`;
+    $("balBox").innerHTML = h;
+  }
+  $("oweAdd").addEventListener("click", () => { form.kind = "devo"; openForm(); setTimeout(() => $("fDesc").focus(), 50); });
+
   // ---------- cliques na tela ----------
   document.querySelector(".wrap").addEventListener("click", (e) => {
+    const op = e.target.closest("[data-opaid]");
+    if (op) {
+      const [ym, id] = op.dataset.opaid.split("|"), it = itemsOf(ym).find(i => i.id === id);
+      if (it) { save(ym, itemsOf(ym).map(i => i.id === id ? { ...i, owePaid: !i.owePaid } : i)); toast(it.owePaid ? `${it.desc}: voltou para o que você deve.` : `${it.desc}: pago ao Renan.`); }
+      return;
+    }
     const rp = e.target.closest("[data-rpaid]");
     if (rp) {
       const [ym, id] = rp.dataset.rpaid.split("|"), it = itemsOf(ym).find(i => i.id === id);
@@ -560,12 +600,12 @@ html.locked body { overflow: hidden; }
   const closingDay = (m) => (state.settings.closing && state.settings.closing[m]) || 25;
   const nextPayday = () => { const t = today0(); const p = lastBizDay(ymOf(t)); return t <= p ? p : lastBizDay(shiftMonth(ymOf(t), 1)); };
   const howOf = (i) => /ita[uú]/i.test(i.method || "") ? "itau" : /mercado ?pago/i.test(i.method || "") ? "mp" : /renan/i.test(i.method || "") ? "renan" : i.kind === "fixed" ? "boleto" : "debito";
-  const kindOf = (i) => i.kind === "settle" ? "settle" : i.kind === "invest" ? "guardar" : i.kind === "in" && i.res ? "retirar" : i.kind === "in" ? "entrada" : i.kind === "fixed" ? "conta" : "gasto";
-  const SIMPLE = { settle: "Pagamento do Renan", guardar: "Guardar na reserva", retirar: "Retirar da reserva" };
+  const kindOf = (i) => i.kind === "owe" ? "devo" : i.kind === "settle" ? "settle" : i.kind === "invest" ? "guardar" : i.kind === "in" && i.res ? "retirar" : i.kind === "in" ? "entrada" : i.kind === "fixed" ? "conta" : "gasto";
+  const SIMPLE = { settle: "Pagamento do Renan", guardar: "Guardar na reserva", retirar: "Retirar da reserva", devo: "O que eu devo ao Renan" };
 
   function syncForm() {
     const settle = !!SIMPLE[form.kind];
-    document.querySelector(".seg").hidden = settle; $("fDesc").closest(".field").hidden = settle;
+    document.querySelector(".seg").hidden = settle; $("fDesc").closest(".field").hidden = settle && form.kind !== "devo";
     document.querySelectorAll(".seg [data-kind]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.kind === form.kind)));
     const hows = HOWS[form.kind];
     $("rowHow").hidden = !hows; $("rowSplit").hidden = form.kind === "entrada" || settle;
@@ -586,6 +626,7 @@ html.locked body { overflow: hidden; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
     const d = new Date(v + "T00:00");
     if (form.kind === "settle") return { ym: ymOf(d), d, text: `O Renan te pagou em ${ddmm(d)}.` };
+    if (form.kind === "devo") return { ym: ymOf(d), d, text: "Entra no saldo com o Renan. Não muda a sobra do mês." };
     if (form.kind === "guardar" || form.kind === "retirar") {
       if (form.editing && v === form.editDate) return { ym: form.editing.ym, d, text: "Continua no mesmo lugar." };
       const ym = salaryMonthOf(d), mo = monthOnly(shiftMonth(ym, 1));
@@ -648,6 +689,19 @@ html.locked body { overflow: hidden; }
 
   $("form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (form.kind === "devo") {
+      const desc = $("fDesc").value.trim(), amount = parseAmount($("fVal").value), p = placement();
+      if (!desc) { $("fMsg").textContent = "Escreva o que você deve, por exemplo Mercado."; $("fDesc").focus(); return; }
+      if (!(amount > 0) || !p || !store) { $("fMsg").textContent = "Digite o valor e a data."; return; }
+      const base = { kind: "owe", desc, amount, day: p.d.getDate() };
+      if (form.editing) {
+        const { ym, item } = form.editing, merged = { ...item, ...base };
+        if (p.ym === ym) await save(ym, itemsOf(ym).map(i => i.id === item.id ? merged : i));
+        else { await save(ym, itemsOf(ym).filter(i => i.id !== item.id)); await save(p.ym, itemsOf(p.ym).concat(merged)); }
+      } else await save(p.ym, itemsOf(p.ym).concat({ id: newId(), ...base, owePaid: false }));
+      state.open.balMine = true;
+      $("sheet").close(); toast(`Anotado: você deve ${fmt(amount)} ao Renan.`); return;
+    }
     if (form.kind === "guardar" || form.kind === "retirar") {
       const amount = parseAmount($("fVal").value), p = placement();
       if (!(amount > 0) || !p || !store) { $("fMsg").textContent = "Digite o valor e a data."; return; }

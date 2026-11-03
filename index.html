@@ -224,12 +224,7 @@ html.locked body { overflow: hidden; }
       <span class="owed num" id="owed">—</span>
       <span class="hint" id="owedSub"></span>
       <div id="renanLists"></div>
-      <div class="row" id="paidForm" hidden>
-        <div class="field money" style="flex:1"><b>R$</b><input id="paidVal" inputmode="decimal" placeholder="0,00" aria-label="Quanto o Renan te pagou" autocomplete="off"></div>
-        <button class="btn primary" id="paidSave" type="button">Salvar</button>
-      </div>
       <div class="row">
-        <button class="btn" id="paidBtn" type="button">Ele me pagou</button>
         <button class="btn" id="reportBtn" type="button">Copiar resumo para o WhatsApp</button>
       </div>
     </div>
@@ -442,31 +437,28 @@ html.locked body { overflow: hidden; }
       else (d <= t0 ? due : upcoming).push(x);
     }
     due.sort((a, b) => a.d - b.d); upcoming.sort((a, b) => a.d - b.d); pays.sort((a, b) => b.d - a.d);
-    const owed = due.reduce((a, x) => a + x.i.renan, 0), paid = pays.reduce((a, x) => a + x.i.amount, 0);
+    const done = due.filter(x => x.i.renanPaid).sort((a, b) => b.d - a.d), open = due.filter(x => !x.i.renanPaid);
+    const paid = pays.reduce((a, x) => a + x.i.amount, 0);
     let rest = paid;
-    for (const x of due) { const cover = Math.min(rest, x.i.renan); rest -= cover; x.left = x.i.renan - cover; }
-    return { due, pending: due.filter(x => x.left > 0), pays, upcoming, owed, paid, total: owed - paid };
+    for (const x of open) { const cover = Math.min(rest, x.i.renan); rest -= cover; x.left = x.i.renan - cover; }
+    const pending = open.filter(x => x.left > 0);
+    return { pending, done, pays, upcoming, paid, extra: rest, total: pending.reduce((a, x) => a + x.left, 0) - rest };
   }
   function renderRenan() {
     const L = renanLedger();
     $("owed").textContent = fmt(Math.max(0, L.total));
-    $("owedSub").textContent = L.total < 0 ? `Ele te pagou ${fmt(-L.total)} a mais.` : L.pending.length ? `${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"}. Toque numa conta para corrigir.` : "Nada pendente.";
+    $("owedSub").textContent = L.total < 0 ? `Ele te pagou ${fmt(-L.total)} a mais.` : L.pending.length ? `${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"}. Marque o quadradinho quando ele pagar.` : "Nada pendente.";
     const share = (i) => i.renan === i.amount ? `tudo dele, de ${fmt(i.amount)}` : i.renan === Math.round(i.amount / 2) ? `metade de ${fmt(i.amount)}` : `parte de ${fmt(i.amount)}`;
     const line = ({ i, d, ym, left }) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${ddmm(d)} · ${esc(i.desc)}</div><div class="meta">${left != null && left < i.renan ? `falta ${fmt(left)} · ` : ""}${share(i)}</div></div><span class="val num">${fmt(left != null ? left : i.renan)}</span></div>`;
     const group = (key, title, list, body) => !list.length ? "" : `<div class="line nocheck tap" data-toggle="${key}"><div class="name">${title}</div><span class="meta">${state.open[key] ? "fechar" : "ver"}</span></div>${state.open[key] ? `<div class="sublist">${body}</div>` : ""}`;
-    let h = L.pending.length ? `<div class="flabel" style="margin-top:4px">Pendente</div>${L.pending.map(line).join("")}` : "";
-    h += group("pays", `Pagamentos dele (${fmt(L.paid)})`, L.pays, L.pays.map(({ i, d, ym }) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${ddmm(d)} · Pagamento do Renan</div><div class="meta">toque para corrigir</div></div><span class="val num">${fmt(i.amount)}</span></div>`).join(""));
+    const tickLine = ({ i, d, ym, left }) => `<div class="line${i.renanPaid ? " done" : ""}"><button type="button" class="tick" role="checkbox" aria-checked="${!!i.renanPaid}" aria-label="O Renan pagou ${esc(i.desc)}" data-rpaid="${ym}|${i.id}">${i.renanPaid ? "✓" : ""}</button>
+        <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${ddmm(d)} · ${esc(i.desc)}</div><div class="meta">${left != null && left < i.renan ? `falta ${fmt(left)} · ` : ""}${share(i)}</div></div><span class="val num">${fmt(left != null && !i.renanPaid ? left : i.renan)}</span></div>`;
+    let h = L.pending.length ? `<div class="flabel" style="margin-top:4px">Pendente · marque quando ele pagar</div>${L.pending.map(tickLine).join("")}` : "";
+    h += group("done", `Já pagas por ele (${L.done.length})`, L.done, L.done.map(tickLine).join(""));
+    h += group("pays", `Pagamentos avulsos (${fmt(L.paid)})`, L.pays, L.pays.map(({ i, d, ym }) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${ddmm(d)} · Pagamento do Renan</div><div class="meta">toque para corrigir</div></div><span class="val num">${fmt(i.amount)}</span></div>`).join(""));
     h += group("upcoming", `Ainda vai vencer (${fmt(L.upcoming.reduce((a, x) => a + x.i.renan, 0))})`, L.upcoming, L.upcoming.map(line).join(""));
     $("renanLists").innerHTML = h;
   }
-  $("paidBtn").addEventListener("click", () => { $("paidForm").hidden = !$("paidForm").hidden; if (!$("paidForm").hidden) $("paidVal").focus(); });
-  $("paidSave").addEventListener("click", () => {
-    const v = parseAmount($("paidVal").value);
-    if (!(v > 0)) { toast("Digite quanto ele pagou, por exemplo 1.347,28."); return; }
-    const t = today0(), ym = ymOf(t);
-    save(ym, itemsOf(ym).concat({ id: newId(), kind: "settle", desc: "Pagamento do Renan", amount: v, day: t.getDate(), paid: true }));
-    $("paidVal").value = ""; $("paidForm").hidden = true; toast(`Registrado: o Renan te pagou ${fmt(v)}.`);
-  });
   $("reportBtn").addEventListener("click", () => {
     const L = renanLedger();
     const lines = L.pending.map(({ i, d, left }) => `• ${ddmm(d)} ${i.desc}: ${left < i.renan ? `falta ${fmt(left)} de ${fmt(i.renan)}` : fmt(left)}`);
@@ -477,6 +469,12 @@ html.locked body { overflow: hidden; }
 
   // ---------- cliques na tela ----------
   document.querySelector(".wrap").addEventListener("click", (e) => {
+    const rp = e.target.closest("[data-rpaid]");
+    if (rp) {
+      const [ym, id] = rp.dataset.rpaid.split("|"), it = itemsOf(ym).find(i => i.id === id);
+      if (it) { save(ym, itemsOf(ym).map(i => i.id === id ? { ...i, renanPaid: !i.renanPaid } : i)); toast(it.renanPaid ? `${it.desc}: voltou para pendente.` : `${it.desc}: pago pelo Renan.`); }
+      return;
+    }
     const card = e.target.closest("[data-card]"), paid = e.target.closest("[data-paid]"), tog = e.target.closest("[data-toggle]"), ed = e.target.closest("[data-edit]");
     if (card) {
       const M = shiftMonth(state.month, -1), m = card.dataset.card;

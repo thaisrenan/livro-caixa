@@ -105,6 +105,7 @@ h1, h2, h3 { font-family: var(--font-display); margin: 0; }
 
 /* renan */
 .renan-box { display: grid; gap: 10px; padding: 12px 0 6px; }
+.renan-box .owed.res { color: var(--accent); }
 .renan-box .owed { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; color: var(--renan); }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn { border: 1px solid var(--rule); background: var(--sheet); padding: 11px 16px; border-radius: 10px; font-weight: 600; }
@@ -215,6 +216,25 @@ html.locked body { overflow: hidden; }
   <section class="block" aria-labelledby="hDaily">
     <div class="block-head"><h2 id="hDaily">Gastos do mês (débito e PIX)</h2><span class="tot num" id="totDaily"></span></div>
     <div id="listDaily"></div>
+  </section>
+
+  <section class="block" aria-labelledby="hRes">
+    <div class="block-head"><h2 id="hRes">Reserva</h2></div>
+    <div class="renan-box">
+      <span class="hint">Você tem guardado</span>
+      <span class="owed num res" id="resBal">—</span>
+      <span class="hint" id="resSub"></span>
+      <div class="row" id="resSet" hidden>
+        <div class="field money" style="flex:1"><b>R$</b><input id="resVal" inputmode="decimal" placeholder="0,00" aria-label="Quanto tem na reserva hoje" autocomplete="off"></div>
+        <button class="btn primary" id="resSave" type="button">Salvar</button>
+      </div>
+      <div id="resList"></div>
+      <div class="row">
+        <button class="btn" id="resIn" type="button">Guardar</button>
+        <button class="btn" id="resOut" type="button">Retirar</button>
+        <button class="btn" id="resFix" type="button">Corrigir saldo</button>
+      </div>
+    </div>
   </section>
 
   <section class="block" aria-labelledby="hRenan">
@@ -354,17 +374,19 @@ html.locked body { overflow: hidden; }
   function monthView(N) {
     const M = shiftMonth(N, -1), iM = itemsOf(M), iN = itemsOf(N);
     const v = { N, M, payday: lastBizDay(M), next: lastBizDay(N) };
-    v.income = iM.filter(i => i.kind === "in");
+    v.income = iM.filter(i => i.kind === "in" && !i.res);
+    v.saved = iM.filter(i => i.kind === "invest");
+    v.taken = iM.filter(i => i.kind === "in" && i.res);
     v.cards = {};
     iM.filter(i => (i.kind === "fixed" || i.kind === "var") && isCard(i)).forEach(i => (v.cards[i.method] = v.cards[i.method] || []).push(i));
-    v.bills = [...iM.filter(i => i.kind === "fixed" && !isCard(i) && !isAdvance(i)).map(i => [i, M]), ...iN.filter(isAdvance).map(i => [i, N]), ...iM.filter(i => i.kind === "invest").map(i => [i, M])];
+    v.bills = [...iM.filter(i => i.kind === "fixed" && !isCard(i) && !isAdvance(i)).map(i => [i, M]), ...iN.filter(isAdvance).map(i => [i, N])];
     v.daily = iN.filter(i => i.kind === "var" && !isCard(i));
     const cardItems = Object.values(v.cards).flat();
     v.totIn = full(v.income);
     v.totBills = full(cardItems) + full(v.bills.map(x => x[0]));
     v.renan = renanOf(cardItems) + renanOf(v.bills.map(x => x[0]));
     v.spent = full(v.daily);
-    v.left = v.totIn + v.renan - v.totBills - v.spent;
+    v.left = v.totIn + v.renan - v.totBills - v.spent - full(v.saved) + full(v.taken);
     return v;
   }
 
@@ -422,6 +444,7 @@ html.locked body { overflow: hidden; }
 
     $("descs").innerHTML = [...new Set(allItems().map(i => i.desc))].sort().map(d => `<option value="${esc(d)}">`).join("");
     renderRenan();
+    renderReserve(v);
   }
 
   // ---------- acerto com o Renan: só o que você já pagou ----------
@@ -468,6 +491,43 @@ html.locked body { overflow: hidden; }
     navigator.clipboard.writeText(text).then(() => toast("Resumo copiado. É só colar no WhatsApp."), () => toast("Não consegui copiar."));
   });
 
+
+  // ---------- reserva: saldo informado + o que foi guardado − o que foi retirado depois disso ----------
+  const isReserve = (i) => i.kind === "invest" || (i.kind === "in" && i.res);
+  const itemDate = (i, ym) => new Date(+(i.pm || ym).slice(0, 4), +(i.pm || ym).slice(5) - 1, i.day || 1);
+  function reserveBalance() {
+    const st = state.settings.reserveStart;
+    if (!st) return null;
+    const from = new Date(st.date + "T00:00");
+    // no dia em que o saldo foi informado, só conta o que foi lançado depois (o id começa com a hora da criação)
+    const createdAfter = (i) => { const t = parseInt(String(i.id).slice(0, 8), 36); return t > 1.6e12 && t >= (st.at || 0); };
+    let bal = st.amount;
+    for (const ym of Object.keys(state.months)) for (const i of itemsOf(ym)) {
+      if (!isReserve(i)) continue;
+      const d = itemDate(i, ym);
+      if (d < from || (+d === +from && !createdAfter(i))) continue;
+      bal += i.kind === "invest" ? i.amount : -i.amount;
+    }
+    return bal;
+  }
+  function renderReserve(v) {
+    const bal = reserveBalance();
+    $("resBal").textContent = bal == null ? "—" : fmt(bal);
+    $("resSet").hidden = bal != null && !state.open.resFix;
+    $("resSub").textContent = bal == null ? "Quanto tem na caixinha hoje? Digite uma vez, e o app vai somando e tirando." : state.open.resFix ? "Digite o valor que está na caixinha hoje." : "";
+    const moves = [...v.saved.map(i => [i, "Guardou"]), ...v.taken.map(i => [i, "Retirou"])];
+    $("resList").innerHTML = moves.length ? `<div class="flabel" style="margin-top:4px">Neste mês</div>` + moves.map(([i, what]) => `<div class="line nocheck tap" data-edit="${v.M}|${i.id}"><div><div class="name">${what}</div><div class="meta">${i.day ? ddmm(itemDate(i, v.M)) + " · " : ""}${what === "Guardou" ? "saiu do dinheiro do mês" : "entrou no dinheiro do mês"}</div></div><span class="val num">${what === "Guardou" ? "− " : "+ "}${fmt(i.amount)}</span></div>`).join("") : "";
+  }
+  $("resSave").addEventListener("click", () => {
+    const val = parseAmount($("resVal").value);
+    if (!(val >= 0) || !store) { toast("Digite o valor, por exemplo 2.500,00."); return; }
+    store.putSettings({ ...state.settings, reserveStart: { amount: val, date: isoOf(today0()), at: Date.now() } });
+    state.open.resFix = false; $("resVal").value = ""; toast("Saldo da reserva salvo."); render();
+  });
+  $("resFix").addEventListener("click", () => { state.open.resFix = !state.open.resFix; render(); if (state.open.resFix) $("resVal").focus(); });
+  $("resIn").addEventListener("click", () => { form.kind = "guardar"; openForm(); });
+  $("resOut").addEventListener("click", () => { form.kind = "retirar"; openForm(); });
+
   // ---------- cliques na tela ----------
   document.querySelector(".wrap").addEventListener("click", (e) => {
     const rp = e.target.closest("[data-rpaid]");
@@ -500,10 +560,11 @@ html.locked body { overflow: hidden; }
   const closingDay = (m) => (state.settings.closing && state.settings.closing[m]) || 25;
   const nextPayday = () => { const t = today0(); const p = lastBizDay(ymOf(t)); return t <= p ? p : lastBizDay(shiftMonth(ymOf(t), 1)); };
   const howOf = (i) => /ita[uú]/i.test(i.method || "") ? "itau" : /mercado ?pago/i.test(i.method || "") ? "mp" : /renan/i.test(i.method || "") ? "renan" : i.kind === "fixed" ? "boleto" : "debito";
-  const kindOf = (i) => i.kind === "settle" ? "settle" : i.kind === "in" ? "entrada" : i.kind === "fixed" ? "conta" : "gasto";
+  const kindOf = (i) => i.kind === "settle" ? "settle" : i.kind === "invest" ? "guardar" : i.kind === "in" && i.res ? "retirar" : i.kind === "in" ? "entrada" : i.kind === "fixed" ? "conta" : "gasto";
+  const SIMPLE = { settle: "Pagamento do Renan", guardar: "Guardar na reserva", retirar: "Retirar da reserva" };
 
   function syncForm() {
-    const settle = form.kind === "settle";
+    const settle = !!SIMPLE[form.kind];
     document.querySelector(".seg").hidden = settle; $("fDesc").closest(".field").hidden = settle;
     document.querySelectorAll(".seg [data-kind]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.kind === form.kind)));
     const hows = HOWS[form.kind];
@@ -525,6 +586,11 @@ html.locked body { overflow: hidden; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
     const d = new Date(v + "T00:00");
     if (form.kind === "settle") return { ym: ymOf(d), d, text: `O Renan te pagou em ${ddmm(d)}.` };
+    if (form.kind === "guardar" || form.kind === "retirar") {
+      if (form.editing && v === form.editDate) return { ym: form.editing.ym, d, text: "Continua no mesmo lugar." };
+      const ym = salaryMonthOf(d), mo = monthOnly(shiftMonth(ym, 1));
+      return { ym, d, text: form.kind === "guardar" ? `Sai do dinheiro de ${mo} e vai para a reserva.` : `Sai da reserva e entra no dinheiro de ${mo}.` };
+    }
     if (form.editing && v === form.editDate) return { ym: form.editing.ym, d, text: "Continua no mesmo lugar." };
     if (form.kind === "entrada") { const ym = salaryMonthOf(d); return { ym, d, text: `Entra no dinheiro de ${monthOnly(shiftMonth(ym, 1))}.` }; }
     if (HOWS[form.kind] && CARDS[form.how]) {
@@ -550,12 +616,12 @@ html.locked body { overflow: hidden; }
       // sem data guardada, mostra o dia em que ele é pago, sem mudar o lugar
       $("fDate").value = i.day ? `${i.pm || ym}-${pad(i.day)}` : isoOf(i.kind === "var" && !isCard(i) ? new Date(+ym.slice(0, 4), +ym.slice(5) - 1, 1) : lastBizDay(isAdvance(i) ? shiftMonth(ym, -1) : ym));
       form.editDate = $("fDate").value;
-      $("fTitle").textContent = i.kind === "settle" ? "Pagamento do Renan" : "Editar"; $("fDel").hidden = false; $("fDel").textContent = "Excluir"; delArmed = false;
+      $("fTitle").textContent = SIMPLE[kindOf(i)] || "Editar"; $("fDel").hidden = false; $("fDel").textContent = "Excluir"; delArmed = false;
     } else {
       $("form").reset();
       form.split = "0";
       $("fDate").value = isoOf(form.kind === "conta" ? nextPayday() : today0());
-      $("fTitle").textContent = "Lançar"; $("fDel").hidden = true;
+      $("fTitle").textContent = SIMPLE[form.kind] || "Lançar"; $("fDel").hidden = true;
     }
     syncForm();
     $("sheet").showModal();
@@ -582,6 +648,23 @@ html.locked body { overflow: hidden; }
 
   $("form").addEventListener("submit", async (e) => {
     e.preventDefault();
+    if (form.kind === "guardar" || form.kind === "retirar") {
+      const amount = parseAmount($("fVal").value), p = placement();
+      if (!(amount > 0) || !p || !store) { $("fMsg").textContent = "Digite o valor e a data."; return; }
+      const keep = form.editing && $("fDate").value === form.editDate;
+      const base = form.kind === "guardar"
+        ? { kind: "invest", desc: "Guardado na reserva", cat: "Reserva de emergência", method: "PIX ou Transf.", amount, paid: true }
+        : { kind: "in", res: true, desc: "Retirada da reserva", cat: "Resgate da reserva", method: null, amount, paid: true };
+      if (!keep) { base.day = p.d.getDate(); base.pm = ymOf(p.d) !== p.ym ? ymOf(p.d) : null; }
+      if (form.editing) {
+        const { ym, item } = form.editing, merged = { ...item, ...base };
+        if (p.ym === ym) await save(ym, itemsOf(ym).map(i => i.id === item.id ? merged : i));
+        else { await save(ym, itemsOf(ym).filter(i => i.id !== item.id)); await save(p.ym, itemsOf(p.ym).concat(merged)); }
+      } else await save(p.ym, itemsOf(p.ym).concat({ id: newId(), ...base, inst: null }));
+      $("sheet").close();
+      toast(form.kind === "guardar" ? `Guardado: ${fmt(amount)}.` : `Retirado da reserva: ${fmt(amount)}.`);
+      return;
+    }
     if (form.kind === "settle") {
       const amount = parseAmount($("fVal").value), p = placement();
       if (!(amount > 0) || !p || !store) { $("fMsg").textContent = "Digite o valor e a data."; return; }
@@ -701,7 +784,7 @@ html.locked body { overflow: hidden; }
 
   // ---------- início ----------
   const onData = (months) => { state.months = months; render(); };
-  const onSettings = (s) => { state.settings = s || {}; };
+  const onSettings = (s) => { state.settings = s || {}; render(); };
   render();
   LCVault.boot({ onData, onSettings, onStatus: setSync }).then((s) => { store = s; render(); });
 })();

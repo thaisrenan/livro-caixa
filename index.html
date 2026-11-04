@@ -84,8 +84,15 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 12px; }
 .meter i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--in); transition: width .4s ease; }
 .meter i.over { background: var(--out); }
-.tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 3px; gap: 3px; box-shadow: var(--shadow); }
+.tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 3px; gap: 3px; box-shadow: var(--shadow); }
 .tabs button { border: 0; background: transparent; padding: 8px; border-radius: 9px; font-weight: 600; font-size: 0.92rem; color: var(--muted); transition: background .15s, color .15s; }
+.top h1 .yr { font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; color: var(--muted); letter-spacing: 0; margin-left: 2px; }
+.ychips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 1px 4px; scrollbar-width: none; }
+.ychips button { flex: none; border: 1px solid var(--rule); background: var(--sheet); color: var(--muted); border-radius: 999px; padding: 8px 16px; font-weight: 600; font-size: 0.92rem; }
+.ychips button[aria-pressed="true"] { background: var(--grad); border-color: transparent; color: #fff; }
+.hero-stats small.dl, .cat-top small.dl { display: block; font-size: 0.7rem; font-weight: 600; margin-top: 2px; color: var(--muted); }
+.cat-top small.dl { display: inline; }
+small.dl.good { color: var(--in); } small.dl.bad { color: var(--out); }
 .tabs button[aria-selected="true"] { background: var(--sheet-2); color: var(--ink); box-shadow: inset 0 0 0 1px #2b3242; }
 .stack, #viewYear { display: grid; gap: 14px; min-width: 0; }
 .wrap > *, .stack > *, #viewYear > * { min-width: 0; }
@@ -316,6 +323,7 @@ html.locked body { overflow: hidden; }
   <div class="tabs" role="tablist" aria-label="Visão">
     <button type="button" role="tab" id="tabMonth" aria-selected="true">Mês</button>
     <button type="button" role="tab" id="tabYear" aria-selected="false">12 meses</button>
+    <button type="button" role="tab" id="tabArch" aria-selected="false">Anos</button>
   </div>
 
   <div id="viewYear" hidden>
@@ -353,6 +361,31 @@ html.locked body { overflow: hidden; }
       <div class="importbox" id="yFix2" hidden style="margin:10px 0 4px"><span id="yFix2Text"></span><div class="row"><button class="btn small primary" type="button" id="yFix2Btn">Repetir as contas</button></div></div>
       <div class="importbox" id="yFix" hidden style="margin:10px 0 4px"><span id="yFixText"></span><div class="row"><button class="btn small primary" type="button" id="yFixBtn">Repetir o salário</button></div></div>
       <p class="hint" id="yNote" style="padding:10px 0 12px"></p>
+    </section>
+  </div>
+
+  <div id="viewArch" class="stack" hidden>
+    <div class="ychips" id="aYears" role="group" aria-label="Escolha o ano"></div>
+    <section class="hero" aria-labelledby="aLbl">
+      <span class="lbl" id="aLbl">Sobrou no ano</span>
+      <span class="big num" id="aLeft">—</span>
+      <span class="sub" id="aSub"></span>
+      <div class="hero-stats" id="aStats"></div>
+    </section>
+    <section class="block" aria-labelledby="hAChart">
+      <div class="block-head"><h2 id="hAChart">Gastos mês a mês</h2><span class="hint" id="aLegend"></span></div>
+      <div class="ychart" id="aChart"></div>
+    </section>
+    <section class="block" aria-labelledby="hACats">
+      <div class="block-head"><h2 id="hACats">Categorias do ano</h2><span class="hint" id="aCatsHint"></span></div>
+      <div id="aCats"></div>
+    </section>
+    <section class="block" aria-labelledby="hAFile">
+      <div class="block-head"><h2 id="hAFile">Arquivar este ano</h2></div>
+      <div class="renan-box">
+        <span class="hint" id="aFileHint"></span>
+        <div class="row"><button class="btn primary" id="aCsv" type="button">Baixar planilha</button><button class="btn" id="aJson" type="button">Baixar backup do ano</button></div>
+      </div>
     </section>
   </div>
 
@@ -596,8 +629,9 @@ html.locked body { overflow: hidden; }
   function render() {
     if (!state.month) state.month = shiftMonth(salaryMonthOf(today0()), 1);
     const v = monthView(state.month), t0 = today0();
-    $("title").textContent = state.view === "year" ? "12 meses" : monthOnly(v.N);
+    $("title").innerHTML = state.view === "year" ? "12 meses" : state.view === "arch" ? "Anos" : `${monthOnly(v.N)} <span class="yr">${v.N.slice(0, 4)}</span>`;
     if (state.view === "year") renderYear();
+    if (state.view === "arch") renderArch();
 
     // sobra
     const living = t0 >= v.payday && t0 < v.next, future = t0 < v.payday;
@@ -876,6 +910,80 @@ html.locked body { overflow: hidden; }
       return { N: v.N, M: v.M, entra: v.totIn + v.renan + taken, gasta: v.totBills + v.spent, saved, sobra: v.left, noIncome: !v.income.length };
     });
   }
+  // ---------- anos: resumo de cada ano (meses de janeiro a dezembro, como na aba Mês), comparação e arquivo ----------
+  const cycleOut = (v) => [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0]), ...v.daily];
+  function yearData(Y) {
+    const rows = overview(`${Y}-01`), cats = {};
+    rows.forEach(r => cycleOut(monthView(r.N)).forEach(i => { const c = i.cat || "Outros"; cats[c] = (cats[c] || 0) + i.amount; }));
+    const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
+    return { Y, rows, cats, entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sobra: sum("sobra") };
+  }
+  function archYears() {
+    const ys = new Set();
+    Object.keys(state.months).forEach(ym => { if (itemsOf(ym).length) { ys.add(+ym.slice(0, 4)); ys.add(+shiftMonth(ym, 1).slice(0, 4)); } });
+    return [...ys].sort((a, b) => b - a).filter(Y => { const d = yearData(Y); return d.entra || d.gasta; });
+  }
+  function renderArch() {
+    const years = archYears();
+    if (!years.length) { $("aYears").innerHTML = ""; $("aLeft").textContent = "—"; $("aSub").textContent = "Nenhum lançamento ainda."; return; }
+    const Y = years.includes(state.archYear) ? state.archYear : years.find(y => y <= today0().getFullYear()) || years[0];
+    state.archYear = Y;
+    $("aYears").innerHTML = years.map(y => `<button type="button" data-y="${y}" aria-pressed="${y === Y}">${y}</button>`).join("");
+    const d = yearData(Y), hasPrev = years.includes(Y - 1), p = hasPrev ? yearData(Y - 1) : null, cur = today0().getFullYear();
+    // compara só os meses que existem nos dois anos (um ano incompleto não distorce a comparação)
+    const both = p ? d.rows.map((r, k) => (r.entra || r.gasta) && (p.rows[k].entra || p.rows[k].gasta)) : [];
+    const nBoth = both.filter(Boolean).length, part = (rows, key) => rows.reduce((a, r, k) => a + (both[k] ? r[key] : 0), 0);
+    const delta = (key, good) => {
+      if (!nBoth) return ""; const a = part(d.rows, key), b = part(p.rows, key); if (!b) return "";
+      const x = Math.round((a - b) / Math.abs(b) * 100), up = x > 0;
+      return x ? `<small class="dl ${up === good ? "good" : "bad"}">${up ? "▲" : "▼"} ${Math.abs(x)}% vs ${Y - 1}</small>` : `<small class="dl">igual a ${Y - 1}</small>`;
+    };
+    $("aLbl").textContent = `Sobrou em ${Y}`;
+    $("aLeft").textContent = fmt0(d.sobra); $("aLeft").style.color = d.sobra < 0 ? "var(--out)" : "";
+    $("aSub").innerHTML = (Y >= cur ? "Inclui o que está lançado como previsto até dezembro. " : "") + (!p ? "Primeiro ano com lançamentos." : nBoth === 12 ? `Em ${Y - 1} sobrou ${fmt0(p.sobra)}.` : nBoth ? `A comparação com ${Y - 1} usa só ${nBoth === 1 ? "o mês que existe" : `os ${nBoth} meses que existem`} nos dois anos.` : `${Y - 1} não tem os mesmos meses para comparar.`);
+    $("aStats").innerHTML = `<div><span>Entrou</span><b>${fmt0(d.entra)}</b>${delta("entra", true)}</div><div><span>Gastou</span><b>${fmt0(d.gasta)}</b>${delta("gasta", false)}</div><div><span>Guardou</span><b>${fmt0(d.saved)}</b>${delta("saved", true)}</div>`;
+    // gráfico: gastos de cada mês, este ano x ano anterior
+    const W = 340, H = 150, T = 10, B = 22, max = Math.max(1, ...d.rows.map(r => r.gasta), ...(p ? p.rows.map(r => r.gasta) : [])), cw = W / 12, bw = p ? cw * 0.32 : cw * 0.5;
+    let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gastos de cada mês de ${Y}${p ? " comparados com " + (Y - 1) : ""}"><line x1="0" x2="${W}" y1="${H - B}" y2="${H - B}" stroke="var(--rule)"/>`;
+    d.rows.forEach((r, k) => {
+      const bar = (val, x, fill, yr) => { const h = Math.max(val ? 2 : 0, val / max * (H - T - B)); return `<rect x="${x.toFixed(1)}" y="${(H - B - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2.5" fill="${fill}"><title>${monthOnly(r.N)} de ${yr}: ${fmt(val)}</title></rect>`; };
+      const x0 = k * cw + (cw - (p ? bw * 2 + 2 : bw)) / 2;
+      if (p) g += bar(p.rows[k].gasta, x0, "#4b5563", Y - 1);
+      g += bar(r.gasta, p ? x0 + bw + 2 : x0, "url(#aGrad)", Y);
+      g += `<text x="${(k * cw + cw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${monthOnly(r.N).slice(0, 3)}</text>`;
+    });
+    $("aChart").innerHTML = g.replace("<line", `<defs><linearGradient id="aGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><line`) + `</svg>`;
+    $("aLegend").innerHTML = p ? `<b class="dot" style="background:#4b5563"></b> ${Y - 1} &nbsp;<b class="dot" style="background:var(--accent)"></b> ${Y}` : "";
+    // categorias do ano, com a variação em relação ao ano anterior
+    const cats = Object.entries(d.cats).filter(([, x]) => x > 0).sort((a, b) => b[1] - a[1]).slice(0, 8), cmax = cats.length ? cats[0][1] : 1;
+    $("aCatsHint").textContent = nBoth === 12 ? `valor cheio · vs ${Y - 1}` : "valor cheio";
+    $("aCats").innerHTML = cats.length ? `<div class="cats" style="border-top:0;margin-top:0">${cats.map(([c, x], k) => {
+      const cmp = nBoth === 12, prev = cmp ? p.cats[c] || 0 : 0, dd = cmp && prev ? Math.round((x - prev) / prev * 100) : null;
+      return `<div class="cat"><div class="cat-top"><span>${esc(c)}</span><span class="num">${fmt0(x)}${dd != null ? ` <small class="dl ${dd > 0 ? "bad" : "good"}">${dd > 0 ? "▲" : dd < 0 ? "▼" : ""} ${Math.abs(dd)}%</small>` : cmp ? ` <small>novo</small>` : ""}</span></div>
+        <div class="cat-bar"><i style="width:${(x / cmax * 100).toFixed(1)}%;background:${CAT_COLORS[k % 6]}"></i></div></div>`; }).join("")}</div>` : `<p class="empty">Sem gastos neste ano.</p>`;
+    const nItems = Array.from({ length: 12 }, (_, k) => itemsOf(`${Y}-${pad(k + 1)}`).length).reduce((a, b) => a + b, 0);
+    $("aFileHint").textContent = `${nItems} lançamentos de janeiro a dezembro de ${Y}. A planilha abre no Excel ou no Google Planilhas; o backup pode ser restaurado em ⚙. Nada é apagado do app.`;
+  }
+  $("aYears").addEventListener("click", (e) => { const b = e.target.closest("[data-y]"); if (!b) return; state.archYear = +b.dataset.y; renderArch(); });
+  const KIND_TXT = { in: "Entrada", fixed: "Conta", var: "Gasto", invest: "Guardou na reserva", settle: "Acerto com o Renan", owe: "Devo ao Renan" };
+  $("aCsv").addEventListener("click", () => {
+    const Y = state.archYear, n = (c) => ((c || 0) / 100).toFixed(2).replace(".", ","), q = (x) => `"${String(x ?? "").replace(/"/g, '""')}"`;
+    const lines = [["Mês", "Data", "Tipo", "Descrição", "Categoria", "Forma de pagamento", "Valor", "Parte do Renan", "Parcela", "Pago"].join(";")];
+    for (let k = 1; k <= 12; k++) {
+      const ym = `${Y}-${pad(k)}`;
+      itemsOf(ym).slice().sort((a, b) => (a.day || 0) - (b.day || 0)).forEach(i => {
+        const d = itemDate(i, ym), tipo = i.kind === "in" && i.res ? "Retirou da reserva" : KIND_TXT[i.kind] || i.kind;
+        lines.push([q(`${pad(k)}/${Y}`), q(i.day ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}` : ""), q(tipo), q(i.desc), q(i.cat), q(i.method), n(i.amount), n(i.renan), q(i.inst), q(i.paid ? "sim" : "")].join(";"));
+      });
+    }
+    saveFile(`finance-${Y}.csv`, "\ufeff" + lines.join("\r\n"), "text/csv;charset=utf-8");
+  });
+  $("aJson").addEventListener("click", () => {
+    const Y = state.archYear, all = store.exportAll(), months = {};
+    Object.keys(all.months).filter(ym => ym.startsWith(Y + "-")).forEach(ym => { months[ym] = all.months[ym]; });
+    saveFile(`finance-backup-${Y}.json`, JSON.stringify({ ...all, months }, null, 1));
+  });
+
   // último salário lançado antes do mês: base para preencher os meses sem salário
   function lastSalary(N0) {
     for (let k = 0; k <= 12; k++) {
@@ -993,13 +1101,14 @@ html.locked body { overflow: hidden; }
   $("yTable").addEventListener("click", (e) => { const tr = e.target.closest("[data-month]"); if (tr) { state.month = tr.dataset.month; setView("month"); } });
   function setView(vw) {
     state.view = vw;
-    $("viewYear").hidden = vw !== "year"; $("viewMonth").hidden = vw !== "month";
-    $("tabYear").setAttribute("aria-selected", String(vw === "year")); $("tabMonth").setAttribute("aria-selected", String(vw === "month"));
-    $("prev").hidden = $("next").hidden = vw === "year";
+    $("viewYear").hidden = vw !== "year"; $("viewMonth").hidden = vw !== "month"; $("viewArch").hidden = vw !== "arch";
+    $("tabYear").setAttribute("aria-selected", String(vw === "year")); $("tabMonth").setAttribute("aria-selected", String(vw === "month")); $("tabArch").setAttribute("aria-selected", String(vw === "arch"));
+    $("prev").hidden = $("next").hidden = vw !== "month";
     render(); window.scrollTo(0, 0);
   }
   $("tabMonth").addEventListener("click", () => setView("month"));
   $("tabYear").addEventListener("click", () => setView("year"));
+  $("tabArch").addEventListener("click", () => setView("arch"));
 
   // ---------- cliques na tela ----------
   document.querySelector(".wrap").addEventListener("click", (e) => {
@@ -1282,8 +1391,8 @@ html.locked body { overflow: hidden; }
   function setSync(st) { $("syncState").textContent = SYNC[st] || ""; $("syncState").className = "sync " + st; }
 
   // ---------- configurações ----------
-  function saveFile(name, data) {
-    const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+  function saveFile(name, data, type = "application/json") {
+    const url = URL.createObjectURL(new Blob([data], { type }));
     const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   }

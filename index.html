@@ -130,6 +130,10 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .ringhero .hero-stats > div { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 12px 12px 11px; min-width: 0; }
 .ringhero .hero-stats b { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
 section[aria-labelledby="hRenan"], section[aria-labelledby="hBal"] { background: linear-gradient(160deg, #0f2a24, var(--sheet) 70%); border-color: #134e4a; }
+.yield { display: grid; gap: 3px; background: color-mix(in srgb, var(--accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 14px; padding: 11px 13px; font-size: 0.86rem; }
+.yield small { color: var(--muted); font-size: 0.74rem; line-height: 1.35; }
+.yield:empty { display: none; }
+.linkbtn { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 0 0 0 4px; font-size: 0.82rem; }
 .mseg { display: flex; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 2px; gap: 2px; flex: none; }
 .mseg button { border: 0; background: transparent; color: var(--muted); font-size: 0.74rem; font-weight: 600; padding: 5px 9px; border-radius: 8px; }
 .mseg button[aria-pressed="true"] { background: var(--sheet-2); color: var(--ink); }
@@ -394,6 +398,12 @@ html.locked body { overflow: hidden; }
       <span class="hint">Você tem guardado</span>
       <span class="owed num res" id="resBal">—</span>
       <span class="hint" id="resSub"></span>
+      <div class="yield" id="resYield"></div>
+      <div class="row" id="resYieldSet" hidden>
+        <label class="field" style="flex:1"><span class="flabel">% do CDI</span><input id="ryPct" inputmode="decimal" autocomplete="off"></label>
+        <label class="field" style="flex:1"><span class="flabel">CDI ao ano (%)</span><input id="ryCdi" inputmode="decimal" autocomplete="off"></label>
+        <button class="btn primary" id="rySave" type="button" style="align-self:flex-end">Salvar</button>
+      </div>
       <div class="row" id="resSet" hidden>
         <div class="field money" style="flex:1"><b>R$</b><input id="resVal" inputmode="decimal" placeholder="0,00" aria-label="Quanto tem na reserva hoje" autocomplete="off"></div>
         <button class="btn primary" id="resSave" type="button">Salvar</button>
@@ -684,6 +694,11 @@ html.locked body { overflow: hidden; }
   // ---------- reserva: saldo informado + o que foi guardado − o que foi retirado depois disso ----------
   const isReserve = (i) => i.kind === "invest" || (i.kind === "in" && i.res);
   const itemDate = (i, ym) => new Date(+(i.pm || ym).slice(0, 4), +(i.pm || ym).slice(5) - 1, i.day || 1);
+  // rendimento da caixinha: % do CDI, juros compostos por dia útil (252 no ano), antes do IR
+  const yieldCfg = () => ({ pct: 120, cdi: 13.65, ...(state.settings.reserveYield || {}) });
+  const yearRate = () => { const y = yieldCfg(); return y.cdi / 100 * y.pct / 100; };
+  const bizDays = (a, b) => { let n = 0; for (let d = new Date(a); d < b; d.setDate(d.getDate() + 1)) { const w = d.getDay(); if (w && w < 6) n++; } return n; };
+  const grow = (v, from, to) => v * Math.pow(1 + yearRate(), bizDays(from, to) / 252);
   function reserveBalance() {
     const st = state.settings.reserveStart;
     if (!st) return null;
@@ -692,16 +707,19 @@ html.locked body { overflow: hidden; }
     const createdAfter = (i) => { const t = parseInt(String(i.id).slice(0, 8), 36); return t > 1.6e12 && t >= (st.at || 0); };
     // movimentos com data futura ainda não aconteceram: ficam fora do saldo e aparecem como programados
     const t0 = today0();
-    let bal = st.amount;
+    let bal = st.amount, grown = grow(st.amount, from, t0);
     reserveBalance.planned = 0;
     for (const ym of Object.keys(state.months)) for (const i of itemsOf(ym)) {
       if (!isReserve(i)) continue;
       const d = itemDate(i, ym), delta = i.kind === "invest" ? i.amount : -i.amount;
       if (d < from || (+d === +from && !createdAfter(i))) continue;
       if (d > t0) { reserveBalance.planned += delta; continue; }
-      bal += delta;
+      bal += delta; grown += grow(delta, d, t0);
     }
-    return bal;
+    // o rendimento estimado entra no saldo; "Corrigir saldo" zera a estimativa com o valor real
+    reserveBalance.earned = Math.max(0, Math.round(grown - bal));
+    reserveBalance.since = from;
+    return bal + reserveBalance.earned;
   }
   // categorias que mais gastam e fixos x variáveis: tudo o que sai no ciclo (faturas, contas e gastos do mês)
   const CAT_COLORS = ["#8b5cf6", "#22d3ee", "#34d399", "#f0b73a", "#f472b6", "#60a5fa"];
@@ -734,6 +752,10 @@ html.locked body { overflow: hidden; }
     $("resSet").hidden = bal != null && !state.open.resFix;
     const pl = reserveBalance.planned || 0;
     $("resSub").textContent = bal == null ? "Quanto tem na caixinha hoje? Digite uma vez, e o app vai somando e tirando." : state.open.resFix ? "Digite o valor que está na caixinha hoje." : pl ? `Programado para os próximos dias: ${pl > 0 ? "+" : "−"} ${fmt(Math.abs(pl))}` : "";
+    const y = yieldCfg(), monthly = bal == null ? 0 : Math.round(bal * (Math.pow(1 + yearRate(), 21 / 252) - 1));
+    $("resYield").innerHTML = bal == null ? "" : `<div><b>Rende ${String(y.pct).replace(".", ",")}% do CDI</b> <button type="button" class="linkbtn" id="ryEdit">alterar</button></div>
+      <div class="num">${reserveBalance.earned ? `Já rendeu cerca de <b>${fmt(reserveBalance.earned)}</b> desde ${ddmm(reserveBalance.since)} · ` : ""}rende cerca de <b>${fmt(monthly)} por mês</b></div>
+      <small>Estimativa antes do IR, com CDI de ${String(y.cdi).replace(".", ",")}% ao ano. Use "Corrigir saldo" quando quiser acertar com o valor do app do banco.</small>`;
     const moves = [...v.saved.map(i => [i, "Guardou"]), ...v.taken.map(i => [i, "Retirou"])];
     $("resList").innerHTML = moves.length ? `<div class="flabel" style="margin-top:4px">Neste mês</div>` + moves.map(([i, what]) => `<div class="line nocheck tap" data-edit="${v.M}|${i.id}"><div><div class="name">${what}</div><div class="meta">${i.day ? ddmm(itemDate(i, v.M)) + " · " : ""}${what === "Guardou" ? "saiu do dinheiro do mês" : "entrou no dinheiro do mês"}</div></div><span class="val num">${what === "Guardou" ? "− " : "+ "}${fmt(i.amount)}</span></div>`).join("") : "";
   }
@@ -742,6 +764,17 @@ html.locked body { overflow: hidden; }
     if (!(val >= 0) || !store) { toast("Digite o valor, por exemplo 2.500,00."); return; }
     store.putSettings({ ...state.settings, reserveStart: { amount: val, date: isoOf(today0()), at: Date.now() } });
     state.open.resFix = false; $("resVal").value = ""; toast("Saldo da reserva salvo."); render();
+  });
+  $("resYield").addEventListener("click", (e) => {
+    if (!e.target.closest("#ryEdit")) return;
+    const y = yieldCfg(), box = $("resYieldSet"); box.hidden = !box.hidden;
+    $("ryPct").value = String(y.pct).replace(".", ","); $("ryCdi").value = String(y.cdi).replace(".", ",");
+  });
+  $("rySave").addEventListener("click", () => {
+    const pct = parseFloat($("ryPct").value.replace(",", ".")), cdi = parseFloat($("ryCdi").value.replace(",", "."));
+    if (!(pct > 0 && pct < 300 && cdi > 0 && cdi < 50) || !store) { toast("Confira os números, por exemplo 120 e 13,65."); return; }
+    store.putSettings({ ...state.settings, reserveYield: { pct, cdi } });
+    $("resYieldSet").hidden = true; toast("Rendimento salvo."); render();
   });
   $("resFix").addEventListener("click", () => { state.open.resFix = !state.open.resFix; render(); if (state.open.resFix) $("resVal").focus(); });
   $("resIn").addEventListener("click", () => { form.kind = "guardar"; openForm(); });
@@ -826,8 +859,11 @@ html.locked body { overflow: hidden; }
     const tot = { entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sug: sum("sug"), plan: sum("plan"), sobra: sum("sobra") };
     const toSave = tot.saved + tot.sug, resNow = reserveBalance();
     $("ySaveTot").textContent = `${fmt0(toSave)} em 12 meses`;
-    $("yRes").textContent = resNow == null ? fmt0(toSave) + " a mais" : fmt0(resNow + toSave);
-    $("yResMeta").textContent = resNow == null ? "Informe o saldo da caixinha na aba Mês para ver o total." : `hoje ${fmt0(resNow)} + ${fmt0(toSave)} guardados até ${monthOnly(rows[11].N)} de ${rows[11].N.slice(0, 4)}`;
+    const mr = Math.pow(1 + yearRate(), 1 / 12) - 1;
+    let proj = resNow || 0; rows.forEach(r => { proj = proj * (1 + mr) + r.saved + r.sug; });
+    const earn = Math.round(proj - (resNow || 0) - toSave);
+    $("yRes").textContent = resNow == null ? fmt0(toSave + earn) + " a mais" : fmt0(proj);
+    $("yResMeta").textContent = (resNow == null ? "Informe o saldo da caixinha na aba Mês para ver o total. " : `hoje ${fmt0(resNow)} + ${fmt0(toSave)} guardados + `) + `${fmt0(earn)} de rendimento (${String(yieldCfg().pct).replace(".", ",")}% do CDI) até ${monthOnly(rows[11].N)} de ${rows[11].N.slice(0, 4)}`;
     $("yLbl").textContent = "Sobra nos próximos 12 meses";
     $("yLeft").textContent = fmt0(tot.sobra);
     $("yLeft").style.color = tot.sobra < 0 ? "var(--out)" : "";

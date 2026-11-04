@@ -204,12 +204,16 @@
   function askPin({ title, sub, links = [] }) {
     return new Promise((resolve) => {
       let pin = "";
-      screen(`<h1 class="lock-title">${title}</h1><p class="lock-sub" id="pinSub">${sub || ""}</p>
+      const h = new Date().getHours(), acc = LS.get("account") || "";
+      const hello = (h < 5 || h >= 18 ? "Boa noite" : h < 12 ? "Bom dia" : "Boa tarde") + (acc ? ", " + acc.charAt(0).toUpperCase() + acc.slice(1).replace(/[._-].*$/, "") : "");
+      screen(`<img class="lock-icon" src="icon-192.png" alt=""><p class="lock-hello">${hello.replace(/[<>&"]/g, "")}</p>
+        <h1 class="lock-title">${title}</h1><p class="lock-sub" id="pinSub">${sub && sub !== "Finance" ? sub : ""}</p>
         <div class="pin-dots" id="pinDots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
         <p class="lock-msg" id="pinMsg" role="alert"></p>
         <div class="keypad" id="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<button type="button" data-k="${n}">${n}</button>`).join("")}<span></span><button type="button" data-k="0">0</button><button type="button" data-k="del" aria-label="Apagar">⌫</button></div>
         <input id="pinInput" class="pin-input" inputmode="numeric" autocomplete="off" maxlength="4" aria-label="PIN de 4 dígitos">
-        <div class="lock-links">${links.map((l, i) => `<button type="button" class="lock-link" data-link="${i}">${l.label}</button>`).join("")}</div>`);
+        <div class="lock-links">${links.map((l, i) => `<button type="button" class="lock-link" data-link="${i}">${l.label}</button>`).join("")}</div>
+        <p class="lock-safe">🔒 Seus dados ficam criptografados</p>`);
       const dots = () => $("pinDots") && $("pinDots").querySelectorAll("i").forEach((d, i) => d.classList.toggle("on", i < pin.length));
       const push = (k) => {
         if (k === "del") pin = pin.slice(0, -1);
@@ -264,7 +268,7 @@
 
   async function firstRun() {
     return new Promise((resolve) => {
-      screen(`<div class="lock-logo" aria-hidden="true">R$</div><h1 class="lock-title">Finance</h1>
+      screen(`<img class="lock-icon" src="icon-192.png" alt=""><h1 class="lock-title">Finance</h1>
         <p class="lock-sub">Seu controle de receitas, despesas e reserva. Os dados ficam criptografados e sincronizados entre os seus aparelhos.</p>
         <div class="lock-actions col"><button type="button" class="btn primary" id="frLogin">Já uso o Finance: entrar</button><button type="button" class="btn" id="frNew">Começar do zero</button></div>`);
       $("frNew").onclick = () => resolve("new");

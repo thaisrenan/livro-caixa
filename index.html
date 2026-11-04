@@ -261,22 +261,27 @@ dialog.box[open] { animation: fade .18s ease-out; }
 input[type=file] { display: none; }
 .close-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 0.95rem; }
 .close-row input { width: 3.2em; padding: 7px 8px; border: 1px solid var(--rule); border-radius: 9px; background: var(--sheet); text-align: center; }
-.lock { position: fixed; inset: 0; z-index: 100; background: var(--paper); display: grid; place-items: center; overflow-y: auto;
+.lock { position: fixed; inset: 0; z-index: 100; background: radial-gradient(90% 50% at 85% 0%, rgba(139, 92, 246, .5), transparent 70%), radial-gradient(80% 45% at 0% 100%, rgba(34, 211, 238, .22), transparent 70%), var(--paper); display: grid; place-items: center; overflow-y: auto;
   padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 html.locked body { overflow: hidden; }
 .lock-body { width: min(380px, 100%); display: grid; gap: 14px; justify-items: center; text-align: center; animation: fade .2s ease-out; }
-.lock-logo { width: 64px; height: 64px; border-radius: 18px; background: var(--accent); color: #fff; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 1.4rem; box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 35%, transparent); }
 .lock-title { font-size: 1.5rem; letter-spacing: -0.02em; }
+.lock-icon { width: 76px; height: 76px; border-radius: 22px; box-shadow: 0 14px 34px -8px rgba(139, 92, 246, .75); margin-bottom: 8px; }
+.lock-hello { margin: 0 0 -10px; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #a5b4fc; }
+.lock-sub:empty { display: none; }
+.lock-safe { margin: 0; font-size: 0.74rem; color: var(--muted); opacity: .8; }
 .lock-sub { color: var(--muted); margin: 0; max-width: 34ch; }
 .pin-dots { display: flex; gap: 16px; margin: 10px 0 0; }
 .pin-dots i { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--muted); transition: background .12s, border-color .12s, transform .12s; }
-.pin-dots i.on { background: var(--ink); border-color: var(--ink); transform: scale(1.1); }
+.pin-dots i.on { background: linear-gradient(135deg, var(--accent-2), var(--accent)); border-color: transparent; transform: scale(1.1); box-shadow: 0 0 12px rgba(139, 92, 246, .8); }
 .pin-dots.shake { animation: shake .35s; }
 @keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
 .lock-msg { color: var(--out); min-height: 1.3em; margin: 0; font-size: 0.9rem; }
 .keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 14px; }
-.keypad button { height: 72px; border-radius: 50%; border: 1px solid var(--rule); background: var(--sheet); font-size: 1.6rem; font-family: var(--font-display); color: var(--ink); box-shadow: var(--shadow); transition: background .1s, transform .1s; }
-.keypad button:active { background: var(--accent-soft); transform: scale(.94); }
+.keypad { column-gap: 24px; }
+.keypad button { height: 72px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .06); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); font-size: 1.65rem; font-family: var(--font-body); font-weight: 500; color: var(--ink); transition: background .1s, transform .1s; }
+.keypad button[data-k="del"] { background: none; border-color: transparent; }
+.keypad button:active { background: color-mix(in srgb, var(--accent) 35%, transparent); transform: scale(.94); }
 .pin-input { position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
 .lock-links { min-height: 40px; }
 .lock-link { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 10px; }

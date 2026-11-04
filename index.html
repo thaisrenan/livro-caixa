@@ -102,7 +102,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .ychart svg { width: 100%; height: auto; display: block; }
 .ychart text { fill: var(--muted); font-size: 10px; font-family: var(--font-body); }
 .ytable-wrap { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
-.ytable { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+.ytable { width: 100%; border-collapse: collapse; font-size: 0.84rem; font-variant-numeric: tabular-nums; }
 .ytable th { text-align: right; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 10px 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .ytable th:first-child, .ytable td:first-child { text-align: left; padding-left: 0; }
 .ytable td { text-align: right; padding: 11px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -112,7 +112,8 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .ytable td.est { color: var(--muted); }
 .ytable td.est::after { content: " •"; color: var(--warn); }
 .ytable td.pos { color: var(--in); }
-.ytable td.warnc { color: var(--out); } .ytable td.neg { color: var(--out); }
+.ytable td.warnc { color: var(--out); }
+.ytable small.after { display: block; font-size: 0.7rem; font-weight: 500; color: var(--muted); } .ytable td.neg { color: var(--out); }
 .ytable tfoot td { font-weight: 700; border-bottom: 0; border-top: 1px solid var(--rule); }
 .ytable .mname { text-transform: capitalize; font-weight: 500; }
 .hero-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
@@ -757,7 +758,7 @@ html.locked body { overflow: hidden; }
     $("yLeft").textContent = fmt0(tot.sobra);
     $("yLeft").style.color = tot.sobra < 0 ? "var(--out)" : "";
     const neg = rows.filter(r => r.sobra < 0).length, miss = rows.filter(r => r.noIncome);
-    $("ySub").textContent = (tot.sug ? `Sugestão: guardar ${fmt0(tot.sug)} dessa sobra` : `Média de ${fmt0(tot.sobra / 12)} por mês`) + (neg ? ` · ${neg} ${neg === 1 ? "mês fecha" : "meses fecham"} no vermelho` : " · todos os meses fecham no azul");
+    $("ySub").textContent = (tot.sug ? `Guardando a sugestão (${fmt0(tot.sug)}), sobram ${fmt0(tot.sobra - tot.sug)}` : `Média de ${fmt0(tot.sobra / 12)} por mês`) + (neg ? ` · ${neg} ${neg === 1 ? "mês fecha" : "meses fecham"} no vermelho` : " · todos os meses fecham no azul");
     $("yIn").textContent = fmt0(tot.entra); $("yOut").textContent = fmt0(tot.gasta); $("ySaved").textContent = fmt0(toSave);
     // gráfico: barras da sobra de cada mês, com o zero no meio quando há meses negativos
     const W = 340, H = 150, T = 14, B = 22, max = Math.max(1, ...rows.map(r => Math.abs(r.sobra)));
@@ -770,10 +771,12 @@ html.locked body { overflow: hidden; }
       g += `<text x="${(k * cw + cw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${monthOnly(r.N).slice(0, 3)}</text>`;
     });
     $("yChart").innerHTML = g + `</svg>`;
-    const cell = (v, cls = "") => `<td class="${cls}">${fmt0(v)}</td>`;
-    $("yTable").innerHTML = `<thead><tr><th>Mês</th><th>Entra</th><th>Gasta</th><th>Guarda</th><th>Sobra</th></tr></thead><tbody>` +
-      rows.map(r => `<tr data-month="${r.N}"><td class="mname">${monthOnly(r.N)} ${r.N.slice(2, 4)}</td>${cell(r.entra, r.noIncome ? "warnc" : "")}${cell(r.gasta)}${cell(r.saved || r.sug, r.sug ? "est" : "")}${cell(r.sobra, r.sobra < 0 ? "neg" : "pos")}</tr>`).join("") +
-      `</tbody><tfoot><tr><td>Total</td>${cell(tot.entra)}${cell(tot.gasta)}${cell(toSave)}${cell(tot.sobra, tot.sobra < 0 ? "neg" : "pos")}</tr></tfoot>`;
+    // na tabela, só o número (o título diz que é em R$), para caber no celular
+    const n0 = (c) => Math.round((c || 0) / 100).toLocaleString("pt-BR");
+    const cell = (v, cls = "", after) => `<td class="${cls}">${n0(v)}${after != null ? `<small class="after">→ ${n0(after)}</small>` : ""}</td>`;
+    $("yTable").innerHTML = `<thead><tr><th>R$</th><th>Entra</th><th>Gasta</th><th>Guarda</th><th>Sobra</th></tr></thead><tbody>` +
+      rows.map(r => `<tr data-month="${r.N}"><td class="mname">${monthOnly(r.N).slice(0, 3)} ${r.N.slice(2, 4)}</td>${cell(r.entra, r.noIncome ? "warnc" : "")}${cell(r.gasta)}${cell(r.saved || r.sug, r.sug ? "est" : "")}${cell(r.sobra, r.sobra < 0 ? "neg" : "pos", r.sug ? r.sobra - r.sug : null)}</tr>`).join("") +
+      `</tbody><tfoot><tr><td>Total</td>${cell(tot.entra)}${cell(tot.gasta)}${cell(toSave)}${cell(tot.sobra, tot.sobra < 0 ? "neg" : "pos", tot.sug ? tot.sobra - tot.sug : null)}</tr></tfoot>`;
     const sal = lastSalary(N0), mf = missingFixed(N0);
     $("yFix").hidden = !(miss.length && sal);
     if (miss.length && sal) {
@@ -786,7 +789,7 @@ html.locked body { overflow: hidden; }
       $("yFix2Text").textContent = `Algumas contas fixas deste mês faltam nos próximos meses (${names.slice(0, 6).join(", ")}${names.length > 6 ? "…" : ""}). Sem elas, a sobra desses meses aparece maior do que vai ser.`;
       $("yFix2Btn").textContent = `Repetir ${names.length === 1 ? "essa conta" : `essas ${names.length} contas`} até ${monthOnly(rows[11].N)}`;
     }
-    $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" inclui a parte do Renan; "Gasta" conta o valor cheio das contas e dos gastos do mês. Em "Guarda", os valores com • são a sugestão de ${pct}% da sobra; a sobra não muda até você guardar de verdade. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
+    $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" inclui a parte do Renan; "Gasta" conta o valor cheio das contas e dos gastos do mês. Em "Guarda", os valores com • são a sugestão de ${pct}% da sobra; o número com → embaixo da sobra é quanto fica se você guardar a sugestão. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
   }
   $("yFix2Btn").addEventListener("click", async () => {
     if (!store) return;

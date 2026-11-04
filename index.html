@@ -142,6 +142,11 @@ section[aria-labelledby="hRenan"], section[aria-labelledby="hBal"] { background:
 .fv-bar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; background: var(--sheet-2); gap: 2px; }
 .fv-bar i { display: block; height: 100%; transition: width .5s ease; }
 .fv-bar i:first-child { background: var(--accent); } .fv-bar i:last-child { background: var(--accent-2); }
+.fv-bar.three i:first-child { background: #4b5563; } .fv-bar.three i:nth-child(2) { background: var(--accent); }
+.line.total { border-top: 1px solid var(--rule); }
+.line.total .name, .line.total .val { font-weight: 700; color: var(--ink); }
+.line .name .dot { margin-right: 8px; }
+section[aria-labelledby="hYield"] { background: linear-gradient(160deg, #1d1838, var(--sheet) 70%); border-color: #2e2557; }
 .fv-leg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .fv-leg > div { background: var(--sheet-2); border-radius: 14px; padding: 11px 12px; display: grid; gap: 1px; min-width: 0; }
 .fv-leg span { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
@@ -333,6 +338,11 @@ html.locked body { overflow: hidden; }
         <div class="line nocheck"><div><div class="name">Reserva daqui a 12 meses</div><div class="meta" id="yResMeta"></div></div><span class="val num" id="yRes" style="color:var(--accent)">—</span></div>
       </div>
     </section>
+    <section class="block" aria-labelledby="hYield">
+      <div class="block-head"><h2 id="hYield">Rendimento da reserva</h2><span class="tot num" id="yYieldTot" style="color:var(--in)"></span></div>
+      <div id="yYield"></div>
+    </section>
+
     <section class="block" aria-labelledby="hChart">
       <div class="block-head"><h2 id="hChart">Sobra mês a mês</h2></div>
       <div class="ychart" id="yChart"></div>
@@ -406,7 +416,7 @@ html.locked body { overflow: hidden; }
       <div class="yield" id="resYield"></div>
       <div class="row" id="resYieldSet" hidden>
         <label class="field" style="flex:1"><span class="flabel">% do CDI</span><input id="ryPct" inputmode="decimal" autocomplete="off"></label>
-        <label class="field" style="flex:1"><span class="flabel">CDI ao ano (%)</span><input id="ryCdi" inputmode="decimal" autocomplete="off"></label>
+        <label class="field" style="flex:1"><span class="flabel">CDI se não achar o do BC</span><input id="ryCdi" inputmode="decimal" autocomplete="off"></label>
         <button class="btn primary" id="rySave" type="button" style="align-self:flex-end">Salvar</button>
       </div>
       <div class="row" id="resSet" hidden>
@@ -700,7 +710,33 @@ html.locked body { overflow: hidden; }
   const isReserve = (i) => i.kind === "invest" || (i.kind === "in" && i.res);
   const itemDate = (i, ym) => new Date(+(i.pm || ym).slice(0, 4), +(i.pm || ym).slice(5) - 1, i.day || 1);
   // rendimento da caixinha: % do CDI, juros compostos por dia útil (252 no ano), antes do IR
-  const yieldCfg = () => ({ pct: 120, cdi: 13.65, ...(state.settings.reserveYield || {}) });
+  // CDI: busca o do Banco Central (série 4389, % ao ano) uma vez a cada 12 h; sem internet, usa o último salvo ou o digitado
+  const CDI_KEY = "lc:cdiAuto";
+  let cdiAuto = (() => { try { return JSON.parse(localStorage.getItem(CDI_KEY)); } catch (e) { return null; } })();
+  async function refreshCdi() {
+    if (cdiAuto && Date.now() - cdiAuto.at < 12 * 3600e3) return;
+    try {
+      const r = await fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.4389/dados/ultimos/1?formato=json", { cache: "no-store" });
+      const j = await r.json(), v = parseFloat(String(j[0].valor).replace(",", "."));
+      if (!(v > 0 && v < 50)) return;
+      cdiAuto = { v, date: j[0].data, at: Date.now() };
+      try { localStorage.setItem(CDI_KEY, JSON.stringify(cdiAuto)); } catch (e) {}
+      render();
+    } catch (e) { /* sem acesso ao Banco Central: segue com o último valor */ }
+  }
+  const yieldCfg = () => {
+    const y = { pct: 120, cdi: 13.65, ...(state.settings.reserveYield || {}) };
+    return { ...y, typed: y.cdi, cdi: cdiAuto ? cdiAuto.v : y.cdi, src: cdiAuto ? `Banco Central, ${cdiAuto.date.slice(0, 5)}` : "valor digitado" };
+  };
+  // IR da renda fixa (tabela regressiva) pelo tempo de cada valor guardado
+  const irRate = (d) => d <= 180 ? 0.225 : d <= 360 ? 0.2 : d <= 720 ? 0.175 : 0.15;
+  const pctTxt = (x) => String(+(x * 100).toFixed(1)).replace(".", ",") + "%";
+  // rende cada valor (com a data em que entrou) até a data final; devolve bruto e IR
+  function lotsYield(lots, to) {
+    let gross = 0, ir = 0, principal = 0;
+    for (const l of lots) { const g = grow(l.v, l.d, to) - l.v; principal += l.v; gross += g; ir += g * irRate(days(l.d, to)); }
+    return { principal, gross: Math.round(gross), ir: Math.max(0, Math.round(ir)) };
+  }
   const yearRate = () => { const y = yieldCfg(); return y.cdi / 100 * y.pct / 100; };
   const bizDays = (a, b) => { let n = 0; for (let d = new Date(a); d < b; d.setDate(d.getDate() + 1)) { const w = d.getDay(); if (w && w < 6) n++; } return n; };
   const grow = (v, from, to) => v * Math.pow(1 + yearRate(), bizDays(from, to) / 252);
@@ -712,17 +748,21 @@ html.locked body { overflow: hidden; }
     const createdAfter = (i) => { const t = parseInt(String(i.id).slice(0, 8), 36); return t > 1.6e12 && t >= (st.at || 0); };
     // movimentos com data futura ainda não aconteceram: ficam fora do saldo e aparecem como programados
     const t0 = today0();
-    let bal = st.amount, grown = grow(st.amount, from, t0);
+    let bal = st.amount;
+    const lots = [{ v: st.amount, d: from }];
     reserveBalance.planned = 0;
     for (const ym of Object.keys(state.months)) for (const i of itemsOf(ym)) {
       if (!isReserve(i)) continue;
       const d = itemDate(i, ym), delta = i.kind === "invest" ? i.amount : -i.amount;
       if (d < from || (+d === +from && !createdAfter(i))) continue;
       if (d > t0) { reserveBalance.planned += delta; continue; }
-      bal += delta; grown += grow(delta, d, t0);
+      bal += delta; lots.push({ v: delta, d });
     }
     // o rendimento estimado entra no saldo; "Corrigir saldo" zera a estimativa com o valor real
-    reserveBalance.earned = Math.max(0, Math.round(grown - bal));
+    const y = lotsYield(lots, t0);
+    reserveBalance.lots = lots;
+    reserveBalance.earned = Math.max(0, y.gross);
+    reserveBalance.ir = Math.min(y.ir, reserveBalance.earned);
     reserveBalance.since = from;
     return bal + reserveBalance.earned;
   }
@@ -758,9 +798,11 @@ html.locked body { overflow: hidden; }
     const pl = reserveBalance.planned || 0;
     $("resSub").textContent = bal == null ? "Quanto tem na caixinha hoje? Digite uma vez, e o app vai somando e tirando." : state.open.resFix ? "Digite o valor que está na caixinha hoje." : pl ? `Programado para os próximos dias: ${pl > 0 ? "+" : "−"} ${fmt(Math.abs(pl))}` : "";
     const y = yieldCfg(), monthly = bal == null ? 0 : Math.round(bal * (Math.pow(1 + yearRate(), 21 / 252) - 1));
+    const irNow = irRate(days(reserveBalance.since || today0(), today0()) + 30), earned = reserveBalance.earned || 0;
     $("resYield").innerHTML = bal == null ? "" : `<div><b>Rende ${String(y.pct).replace(".", ",")}% do CDI</b> <button type="button" class="linkbtn" id="ryEdit">alterar</button></div>
-      <div class="num">${reserveBalance.earned ? `Já rendeu cerca de <b>${fmt(reserveBalance.earned)}</b> desde ${ddmm(reserveBalance.since)} · ` : ""}rende cerca de <b>${fmt(monthly)} por mês</b></div>
-      <small>Estimativa antes do IR, com CDI de ${String(y.cdi).replace(".", ",")}% ao ano. Use "Corrigir saldo" quando quiser acertar com o valor do app do banco.</small>`;
+      ${earned ? `<div class="num">Já rendeu cerca de <b>${fmt(earned)}</b> desde ${ddmm(reserveBalance.since)} · <b>${fmt(earned - reserveBalance.ir)}</b> tirando o IR</div>` : ""}
+      <div class="num">Rende cerca de <b>${fmt(monthly)} por mês</b> · <b>${fmt(Math.round(monthly * (1 - irNow)))}</b> tirando o IR (${pctTxt(irNow)})</div>
+      <small>Estimativa com CDI de ${String(y.cdi).replace(".", ",")}% ao ano (${y.src}). O IR só é cobrado quando você retira, e cai com o tempo: 22,5% até 6 meses, 20% até 1 ano, 17,5% até 2 anos e 15% depois. Use "Corrigir saldo" para acertar com o valor do app do banco.</small>`;
     const moves = [...v.saved.map(i => [i, "Guardou"]), ...v.taken.map(i => [i, "Retirou"])];
     $("resList").innerHTML = moves.length ? `<div class="flabel" style="margin-top:4px">Neste mês</div>` + moves.map(([i, what]) => `<div class="line nocheck tap" data-edit="${v.M}|${i.id}"><div><div class="name">${what}</div><div class="meta">${i.day ? ddmm(itemDate(i, v.M)) + " · " : ""}${what === "Guardou" ? "saiu do dinheiro do mês" : "entrou no dinheiro do mês"}</div></div><span class="val num">${what === "Guardou" ? "− " : "+ "}${fmt(i.amount)}</span></div>`).join("") : "";
   }
@@ -773,7 +815,7 @@ html.locked body { overflow: hidden; }
   $("resYield").addEventListener("click", (e) => {
     if (!e.target.closest("#ryEdit")) return;
     const y = yieldCfg(), box = $("resYieldSet"); box.hidden = !box.hidden;
-    $("ryPct").value = String(y.pct).replace(".", ","); $("ryCdi").value = String(y.cdi).replace(".", ",");
+    $("ryPct").value = String(y.pct).replace(".", ","); $("ryCdi").value = String(y.typed).replace(".", ",");
   });
   $("rySave").addEventListener("click", () => {
     const pct = parseFloat($("ryPct").value.replace(",", ".")), cdi = parseFloat($("ryCdi").value.replace(",", "."));
@@ -864,11 +906,29 @@ html.locked body { overflow: hidden; }
     const tot = { entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sug: sum("sug"), plan: sum("plan"), sobra: sum("sobra") };
     const toSave = tot.saved + tot.sug, resNow = reserveBalance();
     $("ySaveTot").textContent = `${fmt0(toSave)} em 12 meses`;
-    const mr = Math.pow(1 + yearRate(), 1 / 12) - 1;
-    let proj = resNow || 0; rows.forEach(r => { proj = proj * (1 + mr) + r.saved + r.sug; });
-    const earn = Math.round(proj - (resNow || 0) - toSave);
-    $("yRes").textContent = resNow == null ? fmt0(toSave + earn) + " a mais" : fmt0(proj);
-    $("yResMeta").textContent = (resNow == null ? "Informe o saldo da caixinha na aba Mês para ver o total. " : `hoje ${fmt0(resNow)} + ${fmt0(toSave)} guardados + `) + `${fmt0(earn)} de rendimento (${String(yieldCfg().pct).replace(".", ",")}% do CDI) até ${monthOnly(rows[11].N)} de ${rows[11].N.slice(0, 4)}`;
+    // projeção da reserva: o que já está lá + o que vai entrar (programado ou sugestão), rendendo até o fim do 12º mês
+    const t0 = today0(), end = lastBizDay(rows[11].N), endTxt = `${monthOnly(rows[11].N)} de ${rows[11].N.slice(0, 4)}`;
+    const now = resNow == null ? [] : reserveBalance.lots.slice(), fut = [];
+    rows.forEach(r => {
+      itemsOf(r.M).forEach(i => { if (isReserve(i) && itemDate(i, r.M) > t0) fut.push({ v: i.kind === "invest" ? i.amount : -i.amount, d: itemDate(i, r.M) }); });
+      if (r.sug) fut.push({ v: r.sug, d: lastBizDay(r.M) });
+    });
+    const P = lotsYield([...now, ...fut], end), futIn = fut.reduce((a, l) => a + l.v, 0);
+    // "hoje" já inclui o que rendeu até agora; daqui para a frente: o bruto que falta e o IR de tudo
+    const sofar = resNow == null ? 0 : reserveBalance.earned || 0, gross = P.gross - sofar;
+    const net = gross - P.ir, final = (resNow || 0) + futIn + net, yc = yieldCfg();
+    $("yRes").textContent = resNow == null ? fmt0(futIn + net) + " a mais" : fmt0(final);
+    $("yResMeta").textContent = (resNow == null ? "Informe o saldo da caixinha na aba Mês para ver o total. " : "") + `já tirando o IR, em ${endTxt}`;
+    const rw = (x) => (Math.max(0, x) / Math.max(1, (resNow || 0) + Math.max(0, futIn) + Math.max(0, net)) * 100).toFixed(1);
+    $("yYieldTot").textContent = `+ ${fmt0(net)} líquido`;
+    $("yYield").innerHTML = `<div class="fv"><div class="fv-bar three" role="img" aria-label="Composição da reserva em ${endTxt}"><i style="width:${rw(resNow || 0)}%"></i><i style="width:${rw(futIn)}%"></i><i style="width:${rw(net)}%"></i></div></div>
+      ${resNow == null ? "" : `<div class="line nocheck"><span class="name"><b class="dot" style="background:#4b5563"></b> Hoje na caixinha</span><span class="val num">${fmt0(resNow)}</span></div>`}
+      <div class="line nocheck"><span class="name"><b class="dot" style="background:var(--accent)"></b> Vai guardar</span><span class="val num">${futIn >= 0 ? "+ " : "− "}${fmt0(Math.abs(futIn))}</span></div>
+      <div class="line nocheck"><span class="name"><b class="dot" style="background:transparent"></b> Vai render (bruto)</span><span class="val num">+ ${fmt0(gross)}</span></div>
+      <div class="line nocheck"><span class="name"><b class="dot" style="background:transparent"></b> IR estimado</span><span class="val num" style="color:var(--out)">− ${fmt0(P.ir)}</span></div>
+      <div class="line nocheck"><span class="name"><b class="dot" style="background:var(--accent-2)"></b> Rendimento líquido até lá</span><span class="val num" style="color:var(--in)">+ ${fmt0(net)}</span></div>
+      <div class="line nocheck total"><span class="name">${resNow == null ? "A mais" : "Total"} em ${endTxt}</span><span class="val num">${fmt0(resNow == null ? futIn + net : final)}</span></div>
+      <p class="hint" style="padding:6px 0 12px">${String(yc.pct).replace(".", ",")}% do CDI, com CDI de ${String(yc.cdi).replace(".", ",")}% ao ano (${yc.src}). O IR segue a tabela regressiva, contado para cada valor desde que entrou (o saldo conta desde a última correção), e inclui o do que já rendeu. "Vai guardar" usa o que está programado e a sugestão de ${pct}% da sobra.</p>`;
     $("yLbl").textContent = "Sobra nos próximos 12 meses";
     $("yLeft").textContent = fmt0(tot.sobra);
     $("yLeft").style.color = tot.sobra < 0 ? "var(--out)" : "";
@@ -1287,7 +1347,7 @@ html.locked body { overflow: hidden; }
   const onData = (months) => { state.months = months; render(); };
   const onSettings = (s) => { state.settings = s || {}; render(); };
   render();
-  LCVault.boot({ onData, onSettings, onStatus: setSync }).then((s) => { store = s; render(); });
+  LCVault.boot({ onData, onSettings, onStatus: setSync }).then((s) => { store = s; render(); refreshCdi(); });
 })();
 </script>
 <script>

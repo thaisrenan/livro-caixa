@@ -112,6 +112,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .ytable td.est { color: var(--muted); }
 .ytable td.est::after { content: " •"; color: var(--warn); }
 .ytable td.pos { color: var(--in); }
+.ytable td.nil { color: var(--muted); }
 .ytable td.warnc { color: var(--out); }
 .ytable small.after { display: block; font-size: 0.7rem; font-weight: 500; color: var(--muted); } .ytable td.neg { color: var(--out); }
 .ytable tfoot td { font-weight: 700; border-bottom: 0; border-top: 1px solid var(--rule); }
@@ -746,10 +747,11 @@ html.locked body { overflow: hidden; }
     const N0 = shiftMonth(salaryMonthOf(today0()), 1), rows = overview(N0);
     // sugestão de guardar: uma parte da sobra de cada mês (arredondada para baixo em R$ 10); o que já foi lançado em "Guardar" vale
     const pct = state.settings.savePct ?? 50;
-    rows.forEach(r => { r.sug = r.saved ? 0 : Math.max(0, Math.floor(r.sobra * pct / 100 / 1000) * 1000); });
+    // previsto: a sugestão calculada sobre a sobra antes de guardar; real: o que foi guardado no mês
+    rows.forEach(r => { r.plan = Math.max(0, Math.floor((r.sobra + r.saved) * pct / 100 / 1000) * 1000); r.sug = r.saved ? 0 : r.plan; });
     $("ySavePct").innerHTML = [0, 30, 50, 70].map(v => `<button type="button" data-pct="${v}" aria-pressed="${v === pct}">${v ? v + "% da sobra" : "Não guardar"}</button>`).join("");
     const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
-    const tot = { entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sug: sum("sug"), sobra: sum("sobra") };
+    const tot = { entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sug: sum("sug"), plan: sum("plan"), sobra: sum("sobra") };
     const toSave = tot.saved + tot.sug, resNow = reserveBalance();
     $("ySaveTot").textContent = `${fmt0(toSave)} em 12 meses`;
     $("yRes").textContent = resNow == null ? fmt0(toSave) + " a mais" : fmt0(resNow + toSave);
@@ -774,9 +776,11 @@ html.locked body { overflow: hidden; }
     // na tabela, só o número (o título diz que é em R$), para caber no celular
     const n0 = (c) => Math.round((c || 0) / 100).toLocaleString("pt-BR");
     const cell = (v, cls = "", after) => `<td class="${cls}">${n0(v)}${after != null ? `<small class="after">→ ${n0(after)}</small>` : ""}</td>`;
-    $("yTable").innerHTML = `<thead><tr><th>R$</th><th>Entra</th><th>Gasta</th><th>Guarda</th><th>Sobra</th></tr></thead><tbody>` +
-      rows.map(r => `<tr data-month="${r.N}"><td class="mname">${monthOnly(r.N).slice(0, 3)} ${r.N.slice(2, 4)}</td>${cell(r.entra, r.noIncome ? "warnc" : "")}${cell(r.gasta)}${cell(r.saved || r.sug, r.sug ? "est" : "")}${cell(r.sobra, r.sobra < 0 ? "neg" : "pos", r.sug ? r.sobra - r.sug : null)}</tr>`).join("") +
-      `</tbody><tfoot><tr><td>Total</td>${cell(tot.entra)}${cell(tot.gasta)}${cell(toSave)}${cell(tot.sobra, tot.sobra < 0 ? "neg" : "pos", tot.sug ? tot.sobra - tot.sug : null)}</tr></tfoot>`;
+    // guarda: em cima o real, embaixo o previsto
+    const gcell = (real, plan) => `<td class="${real && real >= plan ? "pos" : real ? "" : "nil"}">${real ? n0(real) : "—"}${plan ? `<small class="after">prev. ${n0(plan)}</small>` : ""}</td>`;
+    $("yTable").innerHTML = `<thead><tr><th>R$</th><th>Entra</th><th>Gasta</th><th>Guardei</th><th>Sobra</th></tr></thead><tbody>` +
+      rows.map(r => `<tr data-month="${r.N}"><td class="mname">${monthOnly(r.N).slice(0, 3)} ${r.N.slice(2, 4)}</td>${cell(r.entra, r.noIncome ? "warnc" : "")}${cell(r.gasta)}${gcell(r.saved, r.plan)}${cell(r.sobra, r.sobra < 0 ? "neg" : "pos", r.sug ? r.sobra - r.sug : null)}</tr>`).join("") +
+      `</tbody><tfoot><tr><td>Total</td>${cell(tot.entra)}${cell(tot.gasta)}${gcell(tot.saved, tot.plan)}${cell(tot.sobra, tot.sobra < 0 ? "neg" : "pos", tot.sug ? tot.sobra - tot.sug : null)}</tr></tfoot>`;
     const sal = lastSalary(N0), mf = missingFixed(N0);
     $("yFix").hidden = !(miss.length && sal);
     if (miss.length && sal) {
@@ -789,7 +793,7 @@ html.locked body { overflow: hidden; }
       $("yFix2Text").textContent = `Algumas contas fixas deste mês faltam nos próximos meses (${names.slice(0, 6).join(", ")}${names.length > 6 ? "…" : ""}). Sem elas, a sobra desses meses aparece maior do que vai ser.`;
       $("yFix2Btn").textContent = `Repetir ${names.length === 1 ? "essa conta" : `essas ${names.length} contas`} até ${monthOnly(rows[11].N)}`;
     }
-    $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" inclui a parte do Renan; "Gasta" conta o valor cheio das contas e dos gastos do mês. Em "Guarda", os valores com • são a sugestão de ${pct}% da sobra; o número com → embaixo da sobra é quanto fica se você guardar a sugestão. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
+    $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" inclui a parte do Renan; "Gasta" conta o valor cheio das contas e dos gastos do mês. Em "Guardei", em cima está o que você guardou de verdade (botão Guardar da Reserva) e embaixo o previsto pela sugestão de ${pct}% da sobra; o número com → embaixo da sobra é quanto fica se você guardar a sugestão. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
   }
   $("yFix2Btn").addEventListener("click", async () => {
     if (!store) return;

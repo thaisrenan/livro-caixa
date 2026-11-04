@@ -93,6 +93,27 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 12px; }
 .meter i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--in); transition: width .4s ease; }
 .meter i.over { background: var(--out); }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; padding: 3px; gap: 3px; box-shadow: var(--shadow); }
+.tabs button { border: 0; background: transparent; padding: 8px; border-radius: 9px; font-weight: 600; font-size: 0.92rem; color: var(--muted); transition: background .15s, color .15s; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.stack, #viewYear { display: grid; gap: 14px; min-width: 0; }
+.wrap > *, .stack > *, #viewYear > * { min-width: 0; }
+.ychart { padding: 14px 0 8px; }
+.ychart svg { width: 100%; height: auto; display: block; }
+.ychart text { fill: var(--muted); font-size: 10px; font-family: var(--font-body); }
+.ytable-wrap { overflow-x: auto; margin: 0 -18px; padding: 0 18px; }
+.ytable { width: 100%; border-collapse: collapse; font-size: 0.86rem; font-variant-numeric: tabular-nums; }
+.ytable th { text-align: right; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 10px 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.ytable th:first-child, .ytable td:first-child { text-align: left; padding-left: 0; }
+.ytable td { text-align: right; padding: 11px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.ytable td:last-child, .ytable th:last-child { padding-right: 0; font-weight: 600; }
+.ytable tbody tr { cursor: pointer; transition: background .12s; }
+.ytable tbody tr:hover td { background: var(--paper); }
+.ytable td.est { color: var(--muted); }
+.ytable td.est::after { content: " •"; color: var(--warn); }
+.ytable td.pos { color: var(--in); } .ytable td.neg { color: var(--out); }
+.ytable tfoot td { font-weight: 700; border-bottom: 0; border-top: 1px solid var(--rule); }
+.ytable .mname { text-transform: capitalize; font-weight: 500; }
 .hero-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .hero-stats span { display: block; font-size: 0.72rem; color: var(--muted); }
 .hero-stats b { font-weight: 600; font-size: 0.95rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -240,6 +261,34 @@ html.locked body { overflow: hidden; }
     <button class="iconbtn" id="settingsBtn" type="button" aria-label="Configurações"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </header>
   <span class="sync" id="syncState" aria-live="polite">Abrindo…</span>
+  <div class="tabs" role="tablist" aria-label="Visão">
+    <button type="button" role="tab" id="tabMonth" aria-selected="true">Mês</button>
+    <button type="button" role="tab" id="tabYear" aria-selected="false">12 meses</button>
+  </div>
+
+  <div id="viewYear" hidden>
+    <section class="hero" aria-labelledby="yLbl">
+      <span class="lbl" id="yLbl">Sobra nos próximos 12 meses</span>
+      <span class="big num" id="yLeft">—</span>
+      <span class="sub" id="ySub"></span>
+      <div class="hero-stats">
+        <div><span>Entra</span><b id="yIn">—</b></div>
+        <div><span>Gasta</span><b id="yOut">—</b></div>
+        <div><span>Guarda</span><b id="ySaved">—</b></div>
+      </div>
+    </section>
+    <section class="block" aria-labelledby="hChart">
+      <div class="block-head"><h2 id="hChart">Sobra mês a mês</h2></div>
+      <div class="ychart" id="yChart"></div>
+    </section>
+    <section class="block" aria-labelledby="hTable">
+      <div class="block-head"><h2 id="hTable">Mês a mês</h2><span class="hint">toque para abrir</span></div>
+      <div class="ytable-wrap"><table class="ytable" id="yTable"></table></div>
+      <p class="hint" id="yNote" style="padding:10px 0 12px"></p>
+    </section>
+  </div>
+
+  <div id="viewMonth" class="stack">
 
   <section class="hero" id="hero" aria-live="polite">
     <span class="lbl" id="heroLbl">Sobra para o mês</span>
@@ -305,6 +354,7 @@ html.locked body { overflow: hidden; }
     <div id="balBox"></div>
     <div class="row" style="padding:4px 0 8px"><button class="btn" id="oweAdd" type="button">+ O que eu devo a ele</button></div>
   </section>
+  </div>
 </div>
 
 <button class="fab" id="fab" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Lançar</button>
@@ -458,7 +508,8 @@ html.locked body { overflow: hidden; }
   function render() {
     if (!state.month) state.month = shiftMonth(salaryMonthOf(today0()), 1);
     const v = monthView(state.month), t0 = today0();
-    $("title").textContent = monthOnly(v.N);
+    $("title").textContent = state.view === "year" ? "12 meses" : monthOnly(v.N);
+    if (state.view === "year") renderYear();
 
     // sobra
     const living = t0 >= v.payday && t0 < v.next, future = t0 < v.payday;
@@ -644,6 +695,91 @@ html.locked body { overflow: hidden; }
     $("balBox").innerHTML = h;
   }
   $("oweAdd").addEventListener("click", () => { form.kind = "devo"; openForm(); setTimeout(() => $("fDesc").focus(), 50); });
+
+
+  // ---------- visão dos próximos 12 meses ----------
+  // meses ainda sem tudo lançado repetem o último salário e as últimas contas fixas, e usam a média do débito/PIX
+  const fmt0 = (c) => brl.format(Math.round((c || 0) / 100)).replace(/,00$/, "");
+  function overview(N0) {
+    const past = [1, 2, 3].map(k => monthView(shiftMonth(N0, -k))).filter(v => v.daily.length);
+    const avgDaily = past.length ? Math.round(past.reduce((a, v) => a + v.spent, 0) / past.length) : 0;
+    // compras soltas no cartão (sem parcela), pela média dos últimos 3 meses
+    const loose = (v) => full(Object.values(v.cards).flat().filter(i => i.kind === "var" && !i.inst));
+    const pastCards = [0, 1, 2].map(k => monthView(shiftMonth(N0, -k))).map(loose).filter(x => x > 0);
+    const avgCard = pastCards.length ? Math.round(pastCards.reduce((a, x) => a + x, 0) / pastCards.length) : 0;
+    // contas do mês (luz, água) e contas adiantadas (aluguel, faculdade, celular) são repetidas separadamente
+    const parts = (v) => {
+      const cons = v.bills.filter(([i]) => !isAdvance(i)).map(x => x[0]), adv = v.bills.filter(([i]) => isAdvance(i)).map(x => x[0]);
+      return { cons: cons.length ? { amount: full(cons), renan: renanOf(cons) } : null, adv: adv.length ? { amount: full(adv), renan: renanOf(adv) } : null };
+    };
+    // contas fixas no cartão (assinaturas, academia...) também se repetem
+    const subsOf = (v) => { const l = Object.values(v.cards).flat().filter(i => i.kind === "fixed"); return l.length ? { amount: full(l), renan: renanOf(l) } : null; };
+    let lastSubs = null;
+    for (let k = 1; k <= 6 && !lastSubs; k++) lastSubs = subsOf(monthView(shiftMonth(N0, -k)));
+    let lastIn = null, lastCons = null, lastAdv = null;
+    for (let k = 1; k <= 6 && (!lastIn || !lastCons || !lastAdv); k++) {
+      const v = monthView(shiftMonth(N0, -k)), pt = parts(v);
+      if (!lastIn && v.income.length) lastIn = v.totIn;
+      if (!lastCons && pt.cons) lastCons = pt.cons;
+      if (!lastAdv && pt.adv) lastAdv = pt.adv;
+    }
+    const rows = [];
+    for (let k = 0; k < 12; k++) {
+      const v = monthView(shiftMonth(N0, k)), est = {};
+      const cardItems = Object.values(v.cards).flat();
+      let inc = v.totIn, fixed = full(v.bills.map(x => x[0])), renan = v.renan, daily = v.spent;
+      if (v.income.length) lastIn = inc; else if (lastIn != null) { inc = lastIn; est.in = true; }
+      const pt = parts(v);
+      if (pt.cons) lastCons = pt.cons; else if (lastCons) { fixed += lastCons.amount; renan += lastCons.renan; est.out = true; }
+      if (pt.adv) lastAdv = pt.adv; else if (lastAdv) { fixed += lastAdv.amount; renan += lastAdv.renan; est.out = true; }
+      if (k > 0 && daily < avgDaily) { daily = avgDaily; est.out = true; }
+      let cards = full(cardItems);
+      const sb = subsOf(v);
+      if (sb) lastSubs = sb; else if (lastSubs) { cards += lastSubs.amount; renan += lastSubs.renan; est.out = true; }
+      if (k > 0 && loose(v) < avgCard) { cards += avgCard - loose(v); est.out = true; }
+      const saved = full(v.saved), taken = full(v.taken);
+      const entra = inc + renan + taken, gasta = cards + fixed + daily;
+      rows.push({ N: v.N, entra, gasta, saved, sobra: entra - gasta - saved, est });
+    }
+    return { rows, avgDaily, avgCard };
+  }
+  function renderYear() {
+    const N0 = shiftMonth(salaryMonthOf(today0()), 1), { rows, avgDaily, avgCard } = overview(N0);
+    const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
+    const tot = { entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sobra: sum("sobra") };
+    $("yLeft").textContent = fmt0(tot.sobra);
+    $("yLeft").style.color = tot.sobra < 0 ? "var(--out)" : "";
+    const neg = rows.filter(r => r.sobra < 0).length;
+    $("ySub").textContent = `Média de ${fmt0(tot.sobra / 12)} por mês` + (neg ? ` · ${neg} ${neg === 1 ? "mês fecha" : "meses fecham"} no vermelho` : " · todos os meses fecham no azul");
+    $("yIn").textContent = fmt0(tot.entra); $("yOut").textContent = fmt0(tot.gasta); $("ySaved").textContent = fmt0(tot.saved);
+    // gráfico: barras da sobra de cada mês, com o zero no meio quando há meses negativos
+    const W = 340, H = 150, T = 14, B = 22, max = Math.max(1, ...rows.map(r => Math.abs(r.sobra)));
+    const hasNeg = rows.some(r => r.sobra < 0), zero = hasNeg ? T + (H - T - B) / 2 : H - B;
+    const scale = (hasNeg ? (H - T - B) / 2 : H - T - B) / max, cw = W / 12, bw = cw * 0.56;
+    let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Sobra de cada mês nos próximos 12 meses"><line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="var(--rule)"/>`;
+    rows.forEach((r, k) => {
+      const h = Math.max(2, Math.abs(r.sobra) * scale), x = k * cw + (cw - bw) / 2, y = r.sobra >= 0 ? zero - h : zero;
+      const est = r.est.in || r.est.out;
+      g += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${r.sobra >= 0 ? "var(--in)" : "var(--out)"}" opacity="${est ? .45 : 1}"><title>${monthOnly(r.N)}: ${fmt(r.sobra)}${est ? " (estimado)" : ""}</title></rect>`;
+      g += `<text x="${(k * cw + cw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${monthOnly(r.N).slice(0, 3)}</text>`;
+    });
+    $("yChart").innerHTML = g + `</svg>`;
+    const cell = (v, est, cls = "") => `<td class="${est ? "est " : ""}${cls}">${fmt0(v)}</td>`;
+    $("yTable").innerHTML = `<thead><tr><th>Mês</th><th>Entra</th><th>Gasta</th><th>Guarda</th><th>Sobra</th></tr></thead><tbody>` +
+      rows.map(r => `<tr data-month="${r.N}"><td class="mname">${monthOnly(r.N)} ${r.N.slice(2, 4)}</td>${cell(r.entra, r.est.in)}${cell(r.gasta, r.est.out)}${cell(r.saved)}${cell(r.sobra, r.est.in || r.est.out, r.sobra < 0 ? "neg" : "pos")}</tr>`).join("") +
+      `</tbody><tfoot><tr><td>Total</td>${cell(tot.entra)}${cell(tot.gasta)}${cell(tot.saved)}${cell(tot.sobra, false, tot.sobra < 0 ? "neg" : "pos")}</tr></tfoot>`;
+    $("yNote").textContent = `• estimado: quando o mês ainda não tem tudo lançado, o app repete o último salário e as últimas contas fixas, e usa a média do débito e PIX (${fmt0(avgDaily)} por mês) e das compras soltas no cartão (${fmt0(avgCard)} por mês). Parcelas entram como estão lançadas; contas fixas e assinaturas se repetem. "Entra" inclui a parte do Renan; "Gasta" conta o valor cheio das contas.`;
+  }
+  $("yTable").addEventListener("click", (e) => { const tr = e.target.closest("[data-month]"); if (tr) { state.month = tr.dataset.month; setView("month"); } });
+  function setView(vw) {
+    state.view = vw;
+    $("viewYear").hidden = vw !== "year"; $("viewMonth").hidden = vw !== "month";
+    $("tabYear").setAttribute("aria-selected", String(vw === "year")); $("tabMonth").setAttribute("aria-selected", String(vw === "month"));
+    $("prev").hidden = $("next").hidden = vw === "year";
+    render(); window.scrollTo(0, 0);
+  }
+  $("tabMonth").addEventListener("click", () => setView("month"));
+  $("tabYear").addEventListener("click", () => setView("year"));
 
   // ---------- cliques na tela ----------
   document.querySelector(".wrap").addEventListener("click", (e) => {

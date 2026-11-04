@@ -111,7 +111,8 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .ytable tbody tr:hover td { background: var(--paper); }
 .ytable td.est { color: var(--muted); }
 .ytable td.est::after { content: " •"; color: var(--warn); }
-.ytable td.pos { color: var(--in); } .ytable td.neg { color: var(--out); }
+.ytable td.pos { color: var(--in); }
+.ytable td.warnc { color: var(--out); } .ytable td.neg { color: var(--out); }
 .ytable tfoot td { font-weight: 700; border-bottom: 0; border-top: 1px solid var(--rule); }
 .ytable .mname { text-transform: capitalize; font-weight: 500; }
 .hero-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
@@ -292,6 +293,8 @@ html.locked body { overflow: hidden; }
     <section class="block" aria-labelledby="hTable">
       <div class="block-head"><h2 id="hTable">Mês a mês</h2><span class="hint">toque para abrir</span></div>
       <div class="ytable-wrap"><table class="ytable" id="yTable"></table></div>
+      <div class="importbox" id="yFix2" hidden style="margin:10px 0 4px"><span id="yFix2Text"></span><div class="row"><button class="btn small primary" type="button" id="yFix2Btn">Repetir as contas</button></div></div>
+      <div class="importbox" id="yFix" hidden style="margin:10px 0 4px"><span id="yFixText"></span><div class="row"><button class="btn small primary" type="button" id="yFixBtn">Repetir o salário</button></div></div>
       <p class="hint" id="yNote" style="padding:10px 0 12px"></p>
     </section>
   </div>
@@ -711,72 +714,51 @@ html.locked body { overflow: hidden; }
 
 
   // ---------- visão dos próximos 12 meses ----------
-  // meses ainda sem tudo lançado repetem o último salário e as últimas contas fixas, e usam a média do débito/PIX
+  // cada linha usa a mesma conta da aba Mês (só o que está lançado), para os números baterem
   const fmt0 = (c) => brl.format(Math.round((c || 0) / 100)).replace(/,00$/, "");
   function overview(N0) {
-    const past = [1, 2, 3].map(k => monthView(shiftMonth(N0, -k))).filter(v => v.daily.length);
-    const avgDaily = past.length ? Math.round(past.reduce((a, v) => a + v.spent, 0) / past.length) : 0;
-    // quanto dessas compras o Renan costuma devolver (proporção dos últimos meses)
-    const dailyShare = (() => { const t = past.reduce((a, v) => a + v.spent, 0); return t ? past.reduce((a, v) => a + renanOf(v.daily), 0) / t : 0; })();
-    // compras soltas no cartão (sem parcela), pela média dos últimos 3 meses
-    const loose = (v) => full(Object.values(v.cards).flat().filter(i => i.kind === "var" && !i.inst));
-    const pastCards = [0, 1, 2].map(k => monthView(shiftMonth(N0, -k))).map(loose).filter(x => x > 0);
-    const avgCard = pastCards.length ? Math.round(pastCards.reduce((a, x) => a + x, 0) / pastCards.length) : 0;
-    const looseItems = [0, 1, 2].flatMap(k => Object.values(monthView(shiftMonth(N0, -k)).cards).flat().filter(i => i.kind === "var" && !i.inst));
-    const cardShare = full(looseItems) ? renanOf(looseItems) / full(looseItems) : 0;
-    // contas fixas (do mês, adiantadas e no cartão) se repetem pelo nome: cada uma segue com o último valor lançado
-    const fixedOf = (v) => [...v.bills.map(x => x[0]), ...Object.values(v.cards).flat().filter(i => i.kind === "fixed")];
-    const key = (i) => i.desc.trim().toLowerCase();
-    // o que foi lançado com "repetir por X meses" (group) já tem prazo: não é repetido além dele
-    const known = new Map(), knownIn = new Map();
-    const learn = (v) => {
-      fixedOf(v).filter(i => !i.group).forEach(i => known.set(key(i), { amount: i.amount, renan: i.renan || 0, card: isCard(i) }));
-      v.income.filter(i => !i.group).forEach(i => knownIn.set(key(i), i.amount));
-    };
-    for (let k = 6; k >= 1; k--) learn(monthView(shiftMonth(N0, -k)));
-    const rows = [];
-    for (let k = 0; k < 12; k++) {
-      const v = monthView(shiftMonth(N0, k)), est = {};
-      let inc = v.totIn, fixed = full(v.bills.map(x => x[0])), cards = full(Object.values(v.cards).flat()), renan = v.renan, daily = v.spent;
-      const hereIn = new Set(v.income.map(key));
-      for (const [name, amt] of knownIn) if (!hereIn.has(name)) { inc += amt; est.in = true; }
-      const here = new Set(fixedOf(v).map(key));
-      for (const [name, b] of known) {
-        if (here.has(name)) continue;
-        if (b.card) cards += b.amount; else fixed += b.amount;
-        renan += b.renan; est.out = true;
-      }
-      learn(v);
-      if (k > 0 && daily < avgDaily) { renan += Math.round((avgDaily - daily) * dailyShare); daily = avgDaily; est.out = est.in = true; }
-      if (k > 0 && loose(v) < avgCard) { const add = avgCard - loose(v); cards += add; renan += Math.round(add * cardShare); est.out = est.in = true; }
-      const saved = full(v.saved), taken = full(v.taken);
-      const entra = inc + renan + taken, gasta = cards + fixed + daily;
-      rows.push({ N: v.N, entra, gasta, saved, sobra: entra - gasta - saved, est });
+    return Array.from({ length: 12 }, (_, k) => {
+      const v = monthView(shiftMonth(N0, k)), taken = full(v.taken), saved = full(v.saved);
+      return { N: v.N, M: v.M, entra: v.totIn + v.renan + taken, gasta: v.totBills + v.spent, saved, sobra: v.left, noIncome: !v.income.length };
+    });
+  }
+  // último salário lançado antes do mês: base para preencher os meses sem salário
+  function lastSalary(N0) {
+    for (let k = 0; k <= 12; k++) {
+      const v = monthView(shiftMonth(N0, -k)), s = v.income.filter(i => !i.res).sort((a, b) => b.amount - a.amount)[0];
+      if (s) return s;
     }
-    return { rows, avgDaily, avgCard };
+    return null;
+  }
+  // contas fixas do mês atual (do mês, adiantadas e no cartão) que faltam nos meses seguintes
+  function missingFixed(N0) {
+    const base = monthView(N0), key = (i) => i.desc.trim().toLowerCase();
+    const rec = [...base.bills, ...Object.values(base.cards).flat().filter(i => i.kind === "fixed").map(i => [i, base.M])].filter(([i]) => !i.inst);
+    const out = [];
+    for (let k = 1; k < 12; k++) for (const [i, ym0] of rec) {
+      const ym = shiftMonth(ym0, k);
+      if (!itemsOf(ym).some(x => x.kind === i.kind && !x.inst && key(x) === key(i))) out.push({ i, ym });
+    }
+    return out;
   }
   function renderYear() {
-    const N0 = shiftMonth(salaryMonthOf(today0()), 1), { rows, avgDaily, avgCard } = overview(N0);
+    const N0 = shiftMonth(salaryMonthOf(today0()), 1), rows = overview(N0);
     // sugestão de guardar: uma parte da sobra de cada mês (arredondada para baixo em R$ 10); o que já foi lançado em "Guardar" vale
     const pct = state.settings.savePct ?? 50;
-    rows.forEach(r => {
-      r.sug = r.saved ? 0 : Math.max(0, Math.floor(r.sobra * pct / 100 / 1000) * 1000);
-      r.saved += r.sug; r.sobra -= r.sug;
-    });
+    rows.forEach(r => { r.sug = r.saved ? 0 : Math.max(0, Math.floor(r.sobra * pct / 100 / 1000) * 1000); });
     $("ySavePct").innerHTML = [0, 30, 50, 70].map(v => `<button type="button" data-pct="${v}" aria-pressed="${v === pct}">${v ? v + "% da sobra" : "Não guardar"}</button>`).join("");
-    const resNow = reserveBalance();
-    const toSave = rows.reduce((a, r) => a + r.saved, 0);
+    const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
+    const tot = { entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sug: sum("sug"), sobra: sum("sobra") };
+    const toSave = tot.saved + tot.sug, resNow = reserveBalance();
     $("ySaveTot").textContent = `${fmt0(toSave)} em 12 meses`;
     $("yRes").textContent = resNow == null ? fmt0(toSave) + " a mais" : fmt0(resNow + toSave);
     $("yResMeta").textContent = resNow == null ? "Informe o saldo da caixinha na aba Mês para ver o total." : `hoje ${fmt0(resNow)} + ${fmt0(toSave)} guardados até ${monthOnly(rows[11].N)} de ${rows[11].N.slice(0, 4)}`;
-    const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
-    const tot = { entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sobra: sum("sobra") };
-    $("yLbl").textContent = toSave ? "Sobra nos próximos 12 meses, depois de guardar" : "Sobra nos próximos 12 meses";
+    $("yLbl").textContent = "Sobra nos próximos 12 meses";
     $("yLeft").textContent = fmt0(tot.sobra);
     $("yLeft").style.color = tot.sobra < 0 ? "var(--out)" : "";
-    const neg = rows.filter(r => r.sobra < 0).length;
-    $("ySub").textContent = `Média de ${fmt0(tot.sobra / 12)} por mês` + (neg ? ` · ${neg} ${neg === 1 ? "mês fecha" : "meses fecham"} no vermelho` : " · todos os meses fecham no azul");
-    $("yIn").textContent = fmt0(tot.entra); $("yOut").textContent = fmt0(tot.gasta); $("ySaved").textContent = fmt0(tot.saved);
+    const neg = rows.filter(r => r.sobra < 0).length, miss = rows.filter(r => r.noIncome);
+    $("ySub").textContent = (tot.sug ? `Sugestão: guardar ${fmt0(tot.sug)} dessa sobra` : `Média de ${fmt0(tot.sobra / 12)} por mês`) + (neg ? ` · ${neg} ${neg === 1 ? "mês fecha" : "meses fecham"} no vermelho` : " · todos os meses fecham no azul");
+    $("yIn").textContent = fmt0(tot.entra); $("yOut").textContent = fmt0(tot.gasta); $("ySaved").textContent = fmt0(toSave);
     // gráfico: barras da sobra de cada mês, com o zero no meio quando há meses negativos
     const W = 340, H = 150, T = 14, B = 22, max = Math.max(1, ...rows.map(r => Math.abs(r.sobra)));
     const hasNeg = rows.some(r => r.sobra < 0), zero = hasNeg ? T + (H - T - B) / 2 : H - B;
@@ -784,17 +766,46 @@ html.locked body { overflow: hidden; }
     let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Sobra de cada mês nos próximos 12 meses"><line x1="0" x2="${W}" y1="${zero}" y2="${zero}" stroke="var(--rule)"/>`;
     rows.forEach((r, k) => {
       const h = Math.max(2, Math.abs(r.sobra) * scale), x = k * cw + (cw - bw) / 2, y = r.sobra >= 0 ? zero - h : zero;
-      const est = r.est.in || r.est.out;
-      g += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${r.sobra >= 0 ? "var(--in)" : "var(--out)"}" opacity="${est ? .45 : 1}"><title>${monthOnly(r.N)}: ${fmt(r.sobra)}${est ? " (estimado)" : ""}</title></rect>`;
+      g += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${r.sobra >= 0 ? "var(--in)" : "var(--out)"}"><title>${monthOnly(r.N)}: ${fmt(r.sobra)}</title></rect>`;
       g += `<text x="${(k * cw + cw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${monthOnly(r.N).slice(0, 3)}</text>`;
     });
     $("yChart").innerHTML = g + `</svg>`;
-    const cell = (v, est, cls = "") => `<td class="${est ? "est " : ""}${cls}">${fmt0(v)}</td>`;
+    const cell = (v, cls = "") => `<td class="${cls}">${fmt0(v)}</td>`;
     $("yTable").innerHTML = `<thead><tr><th>Mês</th><th>Entra</th><th>Gasta</th><th>Guarda</th><th>Sobra</th></tr></thead><tbody>` +
-      rows.map(r => `<tr data-month="${r.N}"><td class="mname">${monthOnly(r.N)} ${r.N.slice(2, 4)}</td>${cell(r.entra, r.est.in)}${cell(r.gasta, r.est.out)}${cell(r.saved, !!r.sug)}${cell(r.sobra, r.est.in || r.est.out, r.sobra < 0 ? "neg" : "pos")}</tr>`).join("") +
-      `</tbody><tfoot><tr><td>Total</td>${cell(tot.entra)}${cell(tot.gasta)}${cell(tot.saved)}${cell(tot.sobra, false, tot.sobra < 0 ? "neg" : "pos")}</tr></tfoot>`;
-    $("yNote").textContent = `"Guarda" mostra a sugestão (${pct}% da sobra de cada mês) ou o que você já lançou em Guardar; a sobra já vem descontada. • estimado: quando o mês ainda não tem tudo lançado, o app repete o último salário e as últimas contas fixas, e usa a média do débito e PIX (${fmt0(avgDaily)} por mês) e das compras soltas no cartão (${fmt0(avgCard)} por mês). Parcelas entram como estão lançadas; contas fixas e assinaturas se repetem. "Entra" inclui a parte do Renan; "Gasta" conta o valor cheio das contas.`;
+      rows.map(r => `<tr data-month="${r.N}"><td class="mname">${monthOnly(r.N)} ${r.N.slice(2, 4)}</td>${cell(r.entra, r.noIncome ? "warnc" : "")}${cell(r.gasta)}${cell(r.saved || r.sug, r.sug ? "est" : "")}${cell(r.sobra, r.sobra < 0 ? "neg" : "pos")}</tr>`).join("") +
+      `</tbody><tfoot><tr><td>Total</td>${cell(tot.entra)}${cell(tot.gasta)}${cell(toSave)}${cell(tot.sobra, tot.sobra < 0 ? "neg" : "pos")}</tr></tfoot>`;
+    const sal = lastSalary(N0), mf = missingFixed(N0);
+    $("yFix").hidden = !(miss.length && sal);
+    if (miss.length && sal) {
+      $("yFixText").textContent = `${miss.length} ${miss.length === 1 ? "mês ainda não tem" : "meses ainda não têm"} salário lançado (${miss.map(r => monthOnly(r.N).slice(0, 3)).join(", ")}). Por isso ${miss.length === 1 ? "ele aparece" : "eles aparecem"} mais no vermelho.`;
+      $("yFixBtn").textContent = `Repetir o salário de ${fmt0(sal.amount)} nesses meses`;
+    }
+    $("yFix2").hidden = !mf.length;
+    if (mf.length) {
+      const names = [...new Set(mf.map(x => x.i.desc))];
+      $("yFix2Text").textContent = `Algumas contas fixas deste mês faltam nos próximos meses (${names.slice(0, 6).join(", ")}${names.length > 6 ? "…" : ""}). Sem elas, a sobra desses meses aparece maior do que vai ser.`;
+      $("yFix2Btn").textContent = `Repetir ${names.length === 1 ? "essa conta" : `essas ${names.length} contas`} até ${monthOnly(rows[11].N)}`;
+    }
+    $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" inclui a parte do Renan; "Gasta" conta o valor cheio das contas e dos gastos do mês. Em "Guarda", os valores com • são a sugestão de ${pct}% da sobra; a sobra não muda até você guardar de verdade. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
   }
+  $("yFix2Btn").addEventListener("click", async () => {
+    if (!store) return;
+    const mf = missingFixed(shiftMonth(salaryMonthOf(today0()), 1)), by = {};
+    mf.forEach(({ i, ym }) => { const { pm, ...copy } = i; (by[ym] = by[ym] || []).push({ ...copy, id: newId(), paid: false, renanPaid: false }); });
+    for (const [ym, list] of Object.entries(by)) await save(ym, itemsOf(ym).concat(list));
+    toast(`${mf.length} contas lançadas nos próximos meses.`);
+  });
+  $("yFixBtn").addEventListener("click", async () => {
+    const N0 = shiftMonth(salaryMonthOf(today0()), 1), sal = lastSalary(N0);
+    if (!sal || !store) return;
+    const group = newId(); let n = 0;
+    for (const r of overview(N0).filter(r => r.noIncome)) {
+      const { pm, ...copy } = sal;
+      await save(r.M, itemsOf(r.M).concat({ ...copy, id: newId(), group, paid: false, day: lastBizDay(r.M).getDate() }));
+      n++;
+    }
+    toast(`Salário lançado em ${n} ${n === 1 ? "mês" : "meses"}.`);
+  });
   $("ySavePct").addEventListener("click", (e) => {
     const b = e.target.closest("[data-pct]"); if (!b || !store) return;
     store.putSettings({ ...state.settings, savePct: +b.dataset.pct });

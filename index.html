@@ -369,25 +369,6 @@ html.locked body { overflow: hidden; }
     <div id="listDaily"></div>
   </section>
 
-  <section class="block" aria-labelledby="hRes">
-    <div class="block-head"><h2 id="hRes">Reserva</h2></div>
-    <div class="renan-box">
-      <span class="hint">Você tem guardado</span>
-      <span class="owed num res" id="resBal">—</span>
-      <span class="hint" id="resSub"></span>
-      <div class="row" id="resSet" hidden>
-        <div class="field money" style="flex:1"><b>R$</b><input id="resVal" inputmode="decimal" placeholder="0,00" aria-label="Quanto tem na reserva hoje" autocomplete="off"></div>
-        <button class="btn primary" id="resSave" type="button">Salvar</button>
-      </div>
-      <div id="resList"></div>
-      <div class="row">
-        <button class="btn" id="resIn" type="button">Guardar</button>
-        <button class="btn" id="resOut" type="button">Retirar</button>
-        <button class="btn" id="resFix" type="button">Corrigir saldo</button>
-      </div>
-    </div>
-  </section>
-
   <section class="block" aria-labelledby="hRenan">
     <div class="block-head"><h2 id="hRenan">Acerto com o Renan</h2></div>
     <div class="renan-box">
@@ -405,6 +386,25 @@ html.locked body { overflow: hidden; }
     <div class="block-head"><h2 id="hBal">Saldo com o Renan</h2></div>
     <div id="balBox"></div>
     <div class="row" style="padding:4px 0 8px"><button class="btn" id="oweAdd" type="button">+ O que eu devo a ele</button></div>
+  </section>
+
+  <section class="block" aria-labelledby="hRes">
+    <div class="block-head"><h2 id="hRes">Reserva</h2></div>
+    <div class="renan-box">
+      <span class="hint">Você tem guardado</span>
+      <span class="owed num res" id="resBal">—</span>
+      <span class="hint" id="resSub"></span>
+      <div class="row" id="resSet" hidden>
+        <div class="field money" style="flex:1"><b>R$</b><input id="resVal" inputmode="decimal" placeholder="0,00" aria-label="Quanto tem na reserva hoje" autocomplete="off"></div>
+        <button class="btn primary" id="resSave" type="button">Salvar</button>
+      </div>
+      <div id="resList"></div>
+      <div class="row">
+        <button class="btn" id="resIn" type="button">Guardar</button>
+        <button class="btn" id="resOut" type="button">Retirar</button>
+        <button class="btn" id="resFix" type="button">Corrigir saldo</button>
+      </div>
+    </div>
   </section>
 
   <section class="block" aria-labelledby="hCats">

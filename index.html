@@ -503,7 +503,8 @@ html.locked body { overflow: hidden; }
     const cardItems = Object.values(v.cards).flat();
     v.totIn = full(v.income);
     v.totBills = full(cardItems) + full(v.bills.map(x => x[0]));
-    v.renan = renanOf(cardItems) + renanOf(v.bills.map(x => x[0]));
+    // a parte do Renan inclui as compras divididas no débito e PIX
+    v.renan = renanOf(cardItems) + renanOf(v.bills.map(x => x[0])) + renanOf(v.daily);
     v.spent = full(v.daily);
     v.left = v.totIn + v.renan - v.totBills - v.spent - full(v.saved) + full(v.taken);
     return v;
@@ -536,7 +537,7 @@ html.locked body { overflow: hidden; }
     if (!v.income.length) h += `<p class="empty">Nenhum salário lançado para ${ddmm(v.payday)}.</p>`;
     if (v.renan) {
       const open = state.open.renan;
-      const parts = [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0])].filter(i => i.renan);
+      const parts = [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0]), ...v.daily].filter(i => i.renan);
       h += `<div class="line nocheck tap renan" data-toggle="renan"><div><div class="name">Renan te passa</div><div class="meta">${open ? "fechar" : "ver de quê"}</div></div><span class="val num">${fmt(v.renan)}</span></div>` +
         (open ? `<div class="sublist">${parts.map(i => `<div class="line nocheck"><span class="name">${esc(i.desc)}</span><span class="val num">${fmt(i.renan)}</span></div>`).join("")}</div>` : "");
     }
@@ -707,10 +708,14 @@ html.locked body { overflow: hidden; }
   function overview(N0) {
     const past = [1, 2, 3].map(k => monthView(shiftMonth(N0, -k))).filter(v => v.daily.length);
     const avgDaily = past.length ? Math.round(past.reduce((a, v) => a + v.spent, 0) / past.length) : 0;
+    // quanto dessas compras o Renan costuma devolver (proporção dos últimos meses)
+    const dailyShare = (() => { const t = past.reduce((a, v) => a + v.spent, 0); return t ? past.reduce((a, v) => a + renanOf(v.daily), 0) / t : 0; })();
     // compras soltas no cartão (sem parcela), pela média dos últimos 3 meses
     const loose = (v) => full(Object.values(v.cards).flat().filter(i => i.kind === "var" && !i.inst));
     const pastCards = [0, 1, 2].map(k => monthView(shiftMonth(N0, -k))).map(loose).filter(x => x > 0);
     const avgCard = pastCards.length ? Math.round(pastCards.reduce((a, x) => a + x, 0) / pastCards.length) : 0;
+    const looseItems = [0, 1, 2].flatMap(k => Object.values(monthView(shiftMonth(N0, -k)).cards).flat().filter(i => i.kind === "var" && !i.inst));
+    const cardShare = full(looseItems) ? renanOf(looseItems) / full(looseItems) : 0;
     // contas fixas (do mês, adiantadas e no cartão) se repetem pelo nome: cada uma segue com o último valor lançado
     const fixedOf = (v) => [...v.bills.map(x => x[0]), ...Object.values(v.cards).flat().filter(i => i.kind === "fixed")];
     const key = (i) => i.desc.trim().toLowerCase();
@@ -734,8 +739,8 @@ html.locked body { overflow: hidden; }
         renan += b.renan; est.out = true;
       }
       learn(v);
-      if (k > 0 && daily < avgDaily) { daily = avgDaily; est.out = true; }
-      if (k > 0 && loose(v) < avgCard) { cards += avgCard - loose(v); est.out = true; }
+      if (k > 0 && daily < avgDaily) { renan += Math.round((avgDaily - daily) * dailyShare); daily = avgDaily; est.out = est.in = true; }
+      if (k > 0 && loose(v) < avgCard) { const add = avgCard - loose(v); cards += add; renan += Math.round(add * cardShare); est.out = est.in = true; }
       const saved = full(v.saved), taken = full(v.taken);
       const entra = inc + renan + taken, gasta = cards + fixed + daily;
       rows.push({ N: v.N, entra, gasta, saved, sobra: entra - gasta - saved, est });

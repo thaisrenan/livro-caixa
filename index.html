@@ -574,12 +574,16 @@ html.locked body { overflow: hidden; }
     const from = new Date(st.date + "T00:00");
     // no dia em que o saldo foi informado, só conta o que foi lançado depois (o id começa com a hora da criação)
     const createdAfter = (i) => { const t = parseInt(String(i.id).slice(0, 8), 36); return t > 1.6e12 && t >= (st.at || 0); };
+    // movimentos com data futura ainda não aconteceram: ficam fora do saldo e aparecem como programados
+    const t0 = today0();
     let bal = st.amount;
+    reserveBalance.planned = 0;
     for (const ym of Object.keys(state.months)) for (const i of itemsOf(ym)) {
       if (!isReserve(i)) continue;
-      const d = itemDate(i, ym);
+      const d = itemDate(i, ym), delta = i.kind === "invest" ? i.amount : -i.amount;
       if (d < from || (+d === +from && !createdAfter(i))) continue;
-      bal += i.kind === "invest" ? i.amount : -i.amount;
+      if (d > t0) { reserveBalance.planned += delta; continue; }
+      bal += delta;
     }
     return bal;
   }
@@ -587,7 +591,8 @@ html.locked body { overflow: hidden; }
     const bal = reserveBalance();
     $("resBal").textContent = bal == null ? "—" : fmt(bal);
     $("resSet").hidden = bal != null && !state.open.resFix;
-    $("resSub").textContent = bal == null ? "Quanto tem na caixinha hoje? Digite uma vez, e o app vai somando e tirando." : state.open.resFix ? "Digite o valor que está na caixinha hoje." : "";
+    const pl = reserveBalance.planned || 0;
+    $("resSub").textContent = bal == null ? "Quanto tem na caixinha hoje? Digite uma vez, e o app vai somando e tirando." : state.open.resFix ? "Digite o valor que está na caixinha hoje." : pl ? `Programado para os próximos dias: ${pl > 0 ? "+" : "−"} ${fmt(Math.abs(pl))}` : "";
     const moves = [...v.saved.map(i => [i, "Guardou"]), ...v.taken.map(i => [i, "Retirou"])];
     $("resList").innerHTML = moves.length ? `<div class="flabel" style="margin-top:4px">Neste mês</div>` + moves.map(([i, what]) => `<div class="line nocheck tap" data-edit="${v.M}|${i.id}"><div><div class="name">${what}</div><div class="meta">${i.day ? ddmm(itemDate(i, v.M)) + " · " : ""}${what === "Guardou" ? "saiu do dinheiro do mês" : "entrou no dinheiro do mês"}</div></div><span class="val num">${what === "Guardou" ? "− " : "+ "}${fmt(i.amount)}</span></div>`).join("") : "";
   }

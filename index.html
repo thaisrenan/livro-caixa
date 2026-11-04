@@ -130,6 +130,27 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .ringhero .hero-stats > div { background: var(--sheet); border: 1px solid var(--rule); border-radius: 16px; padding: 12px 12px 11px; min-width: 0; }
 .ringhero .hero-stats b { display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
 section[aria-labelledby="hRenan"], section[aria-labelledby="hBal"] { background: linear-gradient(160deg, #0f2a24, var(--sheet) 70%); border-color: #134e4a; }
+.mseg { display: flex; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 2px; gap: 2px; flex: none; }
+.mseg button { border: 0; background: transparent; color: var(--muted); font-size: 0.74rem; font-weight: 600; padding: 5px 9px; border-radius: 8px; }
+.mseg button[aria-pressed="true"] { background: var(--sheet-2); color: var(--ink); }
+#hCats + .mseg { align-self: center; }
+.fv { padding: 14px 0 4px; }
+.fv-bar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; background: var(--sheet-2); gap: 2px; }
+.fv-bar i { display: block; height: 100%; transition: width .5s ease; }
+.fv-bar i:first-child { background: var(--accent); } .fv-bar i:last-child { background: var(--accent-2); }
+.fv-leg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.fv-leg > div { background: var(--sheet-2); border-radius: 14px; padding: 11px 12px; display: grid; gap: 1px; min-width: 0; }
+.fv-leg span { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.fv-leg strong { font-size: 1.05rem; }
+.fv-leg small { font-size: 0.72rem; color: var(--muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.cats { display: grid; gap: 12px; padding: 16px 0 8px; border-top: 1px solid var(--line); margin-top: 14px; }
+.cat-top { display: flex; justify-content: space-between; gap: 10px; font-size: 0.9rem; margin-bottom: 6px; }
+.cat-top span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cat-top .num { font-weight: 600; white-space: nowrap; }
+.cat-top small { color: var(--muted); font-weight: 500; margin-left: 4px; }
+.cat-bar { height: 8px; border-radius: 99px; background: var(--sheet-2); overflow: hidden; }
+.cat-bar i { display: block; height: 100%; border-radius: 99px; transition: width .5s ease; }
 section[aria-labelledby="hRes"] { background: linear-gradient(160deg, #1d1838, var(--sheet) 70%); border-color: #2e2557; }
 .hero-stats span { display: block; font-size: 0.72rem; color: var(--muted); }
 .hero-stats b { font-weight: 600; font-size: 0.95rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -345,6 +366,12 @@ html.locked body { overflow: hidden; }
   <section class="block" aria-labelledby="hDaily">
     <div class="block-head"><h2 id="hDaily">Gastos do mês (débito e PIX)</h2><span class="tot num" id="totDaily"></span></div>
     <div id="listDaily"></div>
+  </section>
+
+  <section class="block" aria-labelledby="hCats">
+    <div class="block-head"><h2 id="hCats">Para onde vai o dinheiro</h2>
+      <div class="mseg" id="catMode" role="group" aria-label="Valor considerado"><button type="button" data-cm="mine" aria-pressed="true">Sua parte</button><button type="button" data-cm="full" aria-pressed="false">Valor cheio</button></div></div>
+    <div id="catsBox"></div>
   </section>
 
   <section class="block" aria-labelledby="hRes">
@@ -605,6 +632,7 @@ html.locked body { overflow: hidden; }
     renderRenan();
     renderReserve(v);
     renderBalance();
+    renderCats(v);
   }
 
   // ---------- acerto com o Renan: só o que você já pagou ----------
@@ -674,6 +702,31 @@ html.locked body { overflow: hidden; }
     }
     return bal;
   }
+  // categorias que mais gastam e fixos x variáveis: tudo o que sai no ciclo (faturas, contas e gastos do mês)
+  const CAT_COLORS = ["#8b5cf6", "#22d3ee", "#34d399", "#f0b73a", "#f472b6", "#60a5fa"];
+  function renderCats(v) {
+    const mine = (state.catMode || "mine") === "mine";
+    document.querySelectorAll("#catMode button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.cm === "mine") === mine)));
+    const all = [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0]), ...v.daily];
+    const val = (i) => mine ? Math.max(0, i.amount - (i.renan || 0)) : i.amount;
+    const total = all.reduce((a, i) => a + val(i), 0);
+    if (!total) { $("catsBox").innerHTML = `<p class="empty">Nenhum gasto lançado neste mês.</p>`; return; }
+    const by = {};
+    all.forEach(i => { const c = i.cat || "Outros"; by[c] = (by[c] || 0) + val(i); });
+    let cats = Object.entries(by).filter(([, x]) => x > 0).sort((a, b) => b[1] - a[1]);
+    if (cats.length > 7) cats = [...cats.slice(0, 6), ["Outras categorias", cats.slice(6).reduce((a, [, x]) => a + x, 0)]];
+    const max = cats[0][1], pc = (x) => Math.round(x / total * 100);
+    const fixed = all.filter(i => i.kind === "fixed").reduce((a, i) => a + val(i), 0), varb = total - fixed;
+    $("catsBox").innerHTML = `<div class="fv">
+        <div class="fv-bar" role="img" aria-label="Fixos ${pc(fixed)}%, variáveis ${pc(varb)}%"><i style="width:${fixed / total * 100}%"></i><i style="width:${varb / total * 100}%"></i></div>
+        <div class="fv-leg"><div><span><b class="dot" style="background:var(--accent)"></b>Fixos</span><strong class="num">${fmt(fixed)}</strong><small>${pc(fixed)}% · contas que se repetem</small></div>
+        <div><span><b class="dot" style="background:var(--accent-2)"></b>Variáveis</span><strong class="num">${fmt(varb)}</strong><small>${pc(varb)}% · compras do dia a dia</small></div></div></div>
+      <div class="cats">${cats.map(([c, x], k) => `<div class="cat"><div class="cat-top"><span>${esc(c)}</span><span class="num">${fmt(x)} <small>${pc(x)}%</small></span></div>
+        <div class="cat-bar"><i style="width:${(x / max * 100).toFixed(1)}%;background:${k < 6 ? CAT_COLORS[k] : "#4b5563"}"></i></div></div>`).join("")}</div>
+      <p class="hint" style="padding:4px 0 10px">${mine ? "Só a sua parte: tira o que o Renan paga." : "Valor cheio, incluindo a parte do Renan."} Total ${fmt(total)}.</p>`;
+  }
+  $("catMode").addEventListener("click", (e) => { const b = e.target.closest("[data-cm]"); if (!b) return; state.catMode = b.dataset.cm; renderCats(monthView(state.month)); });
+
   function renderReserve(v) {
     const bal = reserveBalance();
     $("resBal").textContent = bal == null ? "—" : fmt(bal);

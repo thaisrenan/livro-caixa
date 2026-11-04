@@ -1,6 +1,6 @@
 // Guarda o app no aparelho para abrir rápido e funcionar sem internet.
 // Os dados não passam por aqui: as chamadas ao Supabase vão sempre direto para a rede.
-const VERSION = "lc-v21";
+const VERSION = "lc-v23";
 const SHELL = ["./", "index.html", "config.js", "importer.js", "vault.js", "qrcode.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
@@ -16,7 +16,7 @@ self.addEventListener("fetch", (e) => {
   if (url.pathname.includes("/rest/v1/")) return;
   if (url.origin === location.origin) {
     // arquivos do app: tenta a rede (para pegar atualizações) e cai no cache sem internet
-    e.respondWith(fetch(req).then((res) => {
+    e.respondWith(fetch(req, { cache: "no-cache" }).then((res) => {
       const copy = res.clone();
       caches.open(VERSION).then((c) => c.put(req, copy));
       return res;

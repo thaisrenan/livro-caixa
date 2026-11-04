@@ -376,6 +376,10 @@ html.locked body { overflow: hidden; }
     </div>
     <div class="field" id="rowHow"><span class="flabel">Como pagou</span><div class="chips" id="fHow"></div></div>
     <label class="field" id="rowInst" hidden><span>Em quantas vezes</span><input id="fInst" inputmode="numeric" placeholder="1" maxlength="2"></label>
+    <div class="field" id="rowScope" hidden><span class="flabel">Aplicar a</span>
+      <div class="chips" id="fScope"><button type="button" data-scope="one" aria-pressed="true">Só este mês</button><button type="button" data-scope="next" aria-pressed="false" id="scopeNext">Este e os próximos</button></div>
+    </div>
+    <label class="field" id="rowRepeat" hidden><span>Repetir por quantos meses</span><input id="fRepeat" inputmode="numeric" value="1" maxlength="2" aria-describedby="repeatHint"><small class="hint" id="repeatHint"></small></label>
     <div class="field" id="rowSplit"><span class="flabel">Dividir com o Renan</span>
       <div class="chips" id="fSplit"><button type="button" data-split="0" aria-pressed="true">Não</button><button type="button" data-split="half" aria-pressed="false">Metade</button><button type="button" data-split="all" aria-pressed="false">É tudo dele</button></div>
     </div>
@@ -707,35 +711,30 @@ html.locked body { overflow: hidden; }
     const loose = (v) => full(Object.values(v.cards).flat().filter(i => i.kind === "var" && !i.inst));
     const pastCards = [0, 1, 2].map(k => monthView(shiftMonth(N0, -k))).map(loose).filter(x => x > 0);
     const avgCard = pastCards.length ? Math.round(pastCards.reduce((a, x) => a + x, 0) / pastCards.length) : 0;
-    // contas do mês (luz, água) e contas adiantadas (aluguel, faculdade, celular) são repetidas separadamente
-    const parts = (v) => {
-      const cons = v.bills.filter(([i]) => !isAdvance(i)).map(x => x[0]), adv = v.bills.filter(([i]) => isAdvance(i)).map(x => x[0]);
-      return { cons: cons.length ? { amount: full(cons), renan: renanOf(cons) } : null, adv: adv.length ? { amount: full(adv), renan: renanOf(adv) } : null };
+    // contas fixas (do mês, adiantadas e no cartão) se repetem pelo nome: cada uma segue com o último valor lançado
+    const fixedOf = (v) => [...v.bills.map(x => x[0]), ...Object.values(v.cards).flat().filter(i => i.kind === "fixed")];
+    const key = (i) => i.desc.trim().toLowerCase();
+    // o que foi lançado com "repetir por X meses" (group) já tem prazo: não é repetido além dele
+    const known = new Map(), knownIn = new Map();
+    const learn = (v) => {
+      fixedOf(v).filter(i => !i.group).forEach(i => known.set(key(i), { amount: i.amount, renan: i.renan || 0, card: isCard(i) }));
+      v.income.filter(i => !i.group).forEach(i => knownIn.set(key(i), i.amount));
     };
-    // contas fixas no cartão (assinaturas, academia...) também se repetem
-    const subsOf = (v) => { const l = Object.values(v.cards).flat().filter(i => i.kind === "fixed"); return l.length ? { amount: full(l), renan: renanOf(l) } : null; };
-    let lastSubs = null;
-    for (let k = 1; k <= 6 && !lastSubs; k++) lastSubs = subsOf(monthView(shiftMonth(N0, -k)));
-    let lastIn = null, lastCons = null, lastAdv = null;
-    for (let k = 1; k <= 6 && (!lastIn || !lastCons || !lastAdv); k++) {
-      const v = monthView(shiftMonth(N0, -k)), pt = parts(v);
-      if (!lastIn && v.income.length) lastIn = v.totIn;
-      if (!lastCons && pt.cons) lastCons = pt.cons;
-      if (!lastAdv && pt.adv) lastAdv = pt.adv;
-    }
+    for (let k = 6; k >= 1; k--) learn(monthView(shiftMonth(N0, -k)));
     const rows = [];
     for (let k = 0; k < 12; k++) {
       const v = monthView(shiftMonth(N0, k)), est = {};
-      const cardItems = Object.values(v.cards).flat();
-      let inc = v.totIn, fixed = full(v.bills.map(x => x[0])), renan = v.renan, daily = v.spent;
-      if (v.income.length) lastIn = inc; else if (lastIn != null) { inc = lastIn; est.in = true; }
-      const pt = parts(v);
-      if (pt.cons) lastCons = pt.cons; else if (lastCons) { fixed += lastCons.amount; renan += lastCons.renan; est.out = true; }
-      if (pt.adv) lastAdv = pt.adv; else if (lastAdv) { fixed += lastAdv.amount; renan += lastAdv.renan; est.out = true; }
+      let inc = v.totIn, fixed = full(v.bills.map(x => x[0])), cards = full(Object.values(v.cards).flat()), renan = v.renan, daily = v.spent;
+      const hereIn = new Set(v.income.map(key));
+      for (const [name, amt] of knownIn) if (!hereIn.has(name)) { inc += amt; est.in = true; }
+      const here = new Set(fixedOf(v).map(key));
+      for (const [name, b] of known) {
+        if (here.has(name)) continue;
+        if (b.card) cards += b.amount; else fixed += b.amount;
+        renan += b.renan; est.out = true;
+      }
+      learn(v);
       if (k > 0 && daily < avgDaily) { daily = avgDaily; est.out = true; }
-      let cards = full(cardItems);
-      const sb = subsOf(v);
-      if (sb) lastSubs = sb; else if (lastSubs) { cards += lastSubs.amount; renan += lastSubs.renan; est.out = true; }
       if (k > 0 && loose(v) < avgCard) { cards += avgCard - loose(v); est.out = true; }
       const saved = full(v.saved), taken = full(v.taken);
       const entra = inc + renan + taken, gasta = cards + fixed + daily;
@@ -841,6 +840,8 @@ html.locked body { overflow: hidden; }
     }
     const onCard = hows && CARDS[form.how];
     $("rowInst").hidden = !onCard || form.kind !== "gasto" || !!form.editing;
+    $("rowRepeat").hidden = (form.kind !== "conta" && form.kind !== "entrada") || !!form.editing;
+    $("repeatHint").textContent = `1 = só este mês. Com 12, ${form.kind === "entrada" ? "a entrada" : "a conta"} entra em cada um dos próximos 12 meses.`;
     $("fSplit").querySelectorAll("[data-split]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.split === form.split)));
     $("fDesc").placeholder = form.kind === "entrada" ? "Ex.: Salário" : form.kind === "conta" ? "Ex.: Luz" : "Ex.: Mercado";
     const p = placement();
@@ -870,6 +871,17 @@ html.locked body { overflow: hidden; }
     return { ym, d, text: `Sai do dinheiro de ${monthOnly(ym)}.` };
   }
 
+  function seriesAfter(ym, item) {
+    if (item.inst || !["fixed", "in"].includes(item.kind)) return [];
+    const same = (i) => i.id !== item.id && i.kind === item.kind && !i.inst && (item.group ? i.group === item.group : !i.group && i.desc.trim().toLowerCase() === item.desc.trim().toLowerCase() && !!i.res === !!item.res);
+    return Object.keys(state.months).filter(m => m > ym).sort().flatMap(m => itemsOf(m).filter(same).map(i => [m, i.id]));
+  }
+  async function applyToSeries(ym, item, fn) {
+    const by = {};
+    seriesAfter(ym, item).forEach(([m, id]) => (by[m] = by[m] || new Set()).add(id));
+    for (const [m, ids] of Object.entries(by)) await save(m, fn(itemsOf(m), ids));
+    return Object.values(by).reduce((a, x) => a + x.size, 0);
+  }
   let delArmed = false;
   function openForm(ym, id) {
     const i = id ? itemsOf(ym).find(x => x.id === id) : null;
@@ -884,8 +896,14 @@ html.locked body { overflow: hidden; }
       $("fDate").value = i.day ? `${i.pm || ym}-${pad(i.day)}` : isoOf(i.kind === "var" && !isCard(i) ? new Date(+ym.slice(0, 4), +ym.slice(5) - 1, 1) : lastBizDay(isAdvance(i) ? shiftMonth(ym, -1) : ym));
       form.editDate = $("fDate").value;
       $("fTitle").textContent = SIMPLE[kindOf(i)] || "Editar"; $("fDel").hidden = false; $("fDel").textContent = "Excluir"; delArmed = false;
+      const n = seriesAfter(ym, i).length;
+      form.scope = "one"; $("rowScope").hidden = !n;
+      $("scopeNext").textContent = `Este e os próximos (${n + 1} meses)`;
+      $("fScope").querySelectorAll("[data-scope]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scope === "one")));
     } else {
       $("form").reset();
+      $("fRepeat").value = "1";
+      $("rowScope").hidden = true; form.scope = "one";
       form.split = "0";
       $("fDate").value = isoOf(form.kind === "conta" ? nextPayday() : today0());
       $("fTitle").textContent = SIMPLE[form.kind] || "Lançar"; $("fDel").hidden = true;
@@ -904,6 +922,7 @@ html.locked body { overflow: hidden; }
     syncForm();
   });
   $("fHow").addEventListener("click", (e) => { const b = e.target.closest("[data-how]"); if (b) { form.how = b.dataset.how; syncForm(); } });
+  $("fScope").addEventListener("click", (e) => { const b = e.target.closest("[data-scope]"); if (!b) return; form.scope = b.dataset.scope; $("fScope").querySelectorAll("[data-scope]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); });
   $("fSplit").addEventListener("click", (e) => { const b = e.target.closest("[data-split]"); if (b) { form.split = b.dataset.split; syncForm(); } });
   $("fDate").addEventListener("change", syncForm);
   $("fDesc").addEventListener("change", () => {
@@ -972,10 +991,27 @@ html.locked body { overflow: hidden; }
         const merged = { ...item, ...base };
         if (p.ym === ym) await save(ym, itemsOf(ym).map(i => i.id === item.id ? merged : i));
         else { await save(ym, itemsOf(ym).filter(i => i.id !== item.id)); await save(p.ym, itemsOf(p.ym).concat(merged)); }
-        toast("Alteração salva.");
+        let more = 0;
+        if (form.scope === "next") {
+          // nos meses seguintes muda nome, valor, forma de pagamento e divisão; a data e o "pago" de cada mês ficam
+          const { desc: d2, amount: a2, method: m2, renan: r2 } = base;
+          more = await applyToSeries(ym, item, (list, ids) => list.map(i => ids.has(i.id) ? { ...i, desc: d2, amount: a2, method: m2, renan: r2 } : i));
+        }
+        toast(more ? `Alteração salva neste e em mais ${more} ${more === 1 ? "mês" : "meses"}.` : "Alteração salva.");
       } else {
         base.cat = kind === "in" ? "Salário" : window.LivroCaixaImport ? LivroCaixaImport.guessCat(desc) : "Outros";
         const n = onCard && kind === "var" ? Math.max(1, Math.min(48, parseInt($("fInst").value, 10) || 1)) : 1;
+        // conta: repete o mesmo valor nos meses seguintes, sem virar parcela
+        const reps = kind === "fixed" || kind === "in" ? Math.max(1, Math.min(60, parseInt($("fRepeat").value, 10) || 1)) : 1;
+        if (reps > 1) {
+          const rgroup = newId();
+          for (let k = 0; k < reps; k++) {
+            const ym = shiftMonth(p.ym, k);
+            await save(ym, itemsOf(ym).concat({ id: newId(), ...base, inst: null, group: rgroup, paid: kind === "in" && k === 0, day: base.day, pm: k ? null : base.pm }));
+          }
+          toast(`${kind === "in" ? "Entrada" : "Conta"} lançada em ${reps} meses, até ${monthOnly(shiftMonth(p.ym, reps - 1))} de ${shiftMonth(p.ym, reps - 1).slice(0, 4)}.`);
+          $("sheet").close(); return;
+        }
         const paidNow = kind === "in" || (kind === "var" && !onCard);
         const group = n > 1 ? newId() : null;
         for (let k = 0; k < n; k++) {
@@ -990,9 +1026,10 @@ html.locked body { overflow: hidden; }
   $("fDel").addEventListener("click", () => {
     if (!form.editing) return;
     if (!delArmed) { delArmed = true; $("fDel").textContent = "Toque de novo"; return; }
-    const { ym, item } = form.editing;
+    const { ym, item } = form.editing, all = form.scope === "next";
     save(ym, itemsOf(ym).filter(i => i.id !== item.id));
-    $("sheet").close(); toast("Excluído.");
+    if (all) applyToSeries(ym, item, (list, ids) => list.filter(i => !ids.has(i.id))).then(n => toast(`Excluído deste e de mais ${n} ${n === 1 ? "mês" : "meses"}.`));
+    $("sheet").close(); if (!all) toast("Excluído.");
   });
 
   // ---------- avisos e sincronização ----------

@@ -239,7 +239,7 @@
   function pasteKeyScreen() {
     return new Promise((resolve) => {
       screen(`<h1 class="lock-title">Conectar este aparelho</h1>
-        <p class="lock-sub">No aparelho que já usa o Livro-Caixa, abra <b>Configurações → Conectar outro aparelho</b> e aponte a câmera para o QR code. Ou cole aqui o link ou o código de recuperação.</p>
+        <p class="lock-sub">No aparelho que já usa o Finance, abra <b>Configurações → Conectar outro aparelho</b> e aponte a câmera para o QR code. Ou cole aqui o link ou o código de recuperação.</p>
         <textarea id="keyPaste" class="lock-text" rows="3" placeholder="Cole o link ou o código"></textarea>
         <p class="lock-msg" id="keyMsg" role="alert"></p>
         <div class="lock-actions"><button type="button" class="btn primary" id="keyGo">Conectar</button><button type="button" class="btn" id="keyBack">Voltar</button></div>`);
@@ -264,9 +264,9 @@
 
   async function firstRun() {
     return new Promise((resolve) => {
-      screen(`<div class="lock-logo" aria-hidden="true">R$</div><h1 class="lock-title">Livro-Caixa</h1>
+      screen(`<div class="lock-logo" aria-hidden="true">R$</div><h1 class="lock-title">Finance</h1>
         <p class="lock-sub">Seu controle de receitas, despesas e reserva. Os dados ficam criptografados e sincronizados entre os seus aparelhos.</p>
-        <div class="lock-actions col"><button type="button" class="btn primary" id="frLogin">Já uso o Livro-Caixa: entrar</button><button type="button" class="btn" id="frNew">Começar do zero</button></div>`);
+        <div class="lock-actions col"><button type="button" class="btn primary" id="frLogin">Já uso o Finance: entrar</button><button type="button" class="btn" id="frNew">Começar do zero</button></div>`);
       $("frNew").onclick = () => resolve("new");
       $("frLogin").onclick = () => resolve("login");
     });
@@ -331,7 +331,7 @@
       resolveRecovered(secret);
     }
     let attempt;
-    const start = () => { attempt = askPin({ title: "Digite seu PIN", sub: "Livro-Caixa", links }); loop(); };
+    const start = () => { attempt = askPin({ title: "Digite seu PIN", sub: "Finance", links }); loop(); };
     let resolveDone;
     const done = new Promise((r) => { resolveDone = r; });
     async function loop() {
@@ -420,7 +420,7 @@
   function resetLocal() { ["wrapped", "cache", "pending", "since", "fails", "account"].forEach(LS.del); }
 
   async function relock() {
-    let r = await askPin({ title: "Digite seu PIN", sub: "Livro-Caixa" });
+    let r = await askPin({ title: "Digite seu PIN", sub: "Finance" });
     while (true) {
       const wait = throttleWait();
       if (wait > 0) { r = await r.again(`Muitas tentativas. Espere ${Math.ceil(wait / 1000)} segundos.`); continue; }

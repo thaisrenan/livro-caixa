@@ -6,10 +6,10 @@
 <meta name="theme-color" content="#0b0d12">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Livro-Caixa">
+<meta name="apple-mobile-web-app-title" content="Finance">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="robots" content="noindex, nofollow">
-<title>Livro-Caixa</title>
+<title>Finance</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -1198,7 +1198,7 @@ html.locked body { overflow: hidden; }
     $("vaultTag").innerHTML = `Este aparelho está no <b>cofre ${store.vaultTag()}</b>. Todos os seus aparelhos precisam mostrar o mesmo número para ter os mesmos dados.`;
     const acc = store.account();
     $("accName").value = acc || "";
-    $("accHint").innerHTML = acc ? `Num aparelho novo, toque em <b>Já uso o Livro-Caixa: entrar</b> e digite <b>${esc(acc)}</b> e o seu PIN.` : "Escolha um nome. Num aparelho novo, você entra só com ele e o seu PIN.";
+    $("accHint").innerHTML = acc ? `Num aparelho novo, toque em <b>Já uso o Finance: entrar</b> e digite <b>${esc(acc)}</b> e o seu PIN.` : "Escolha um nome. Num aparelho novo, você entra só com ele e o seu PIN.";
     $("settings").showModal();
     caches.keys().then(k => { $("appVersion").textContent = "Versão do app: " + (k.find(x => x.startsWith("lc-")) || "—"); }).catch(() => {});
     $("qr").innerHTML = ""; $("qr").hidden = false;
@@ -1220,7 +1220,7 @@ html.locked body { overflow: hidden; }
   $("jsonInput").addEventListener("change", async (e) => {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
     const box = $("backupBox"); box.hidden = false;
-    let data; try { data = JSON.parse(await f.text()); } catch (err) { box.textContent = "Esse arquivo não é um backup do Livro-Caixa."; return; }
+    let data; try { data = JSON.parse(await f.text()); } catch (err) { box.textContent = "Esse arquivo não é um backup do Finance."; return; }
     const n = data && data.months ? Object.keys(data.months).length : 0;
     if (!n) { box.textContent = "Esse arquivo não tem lançamentos."; return; }
     box.innerHTML = `<span>${n} meses no arquivo. Esses meses substituem os que estão no app.</span><div class="row"><button class="btn small primary" type="button" data-go>Restaurar</button><button class="btn small" type="button" data-cancel>Cancelar</button></div>`;

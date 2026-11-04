@@ -845,8 +845,11 @@ html.locked body { overflow: hidden; }
     }
     const onCard = hows && CARDS[form.how];
     $("rowInst").hidden = !onCard || form.kind !== "gasto" || !!form.editing;
-    $("rowRepeat").hidden = (form.kind !== "conta" && form.kind !== "entrada") || !!form.editing;
-    $("repeatHint").textContent = `1 = só este mês. Com 12, ${form.kind === "entrada" ? "a entrada" : "a conta"} entra em cada um dos próximos 12 meses.`;
+    $("rowRepeat").hidden = (form.kind !== "conta" && form.kind !== "entrada") || !!(form.editing && form.editing.item.inst);
+    const what = form.kind === "entrada" ? "a entrada" : "a conta";
+    $("repeatHint").textContent = form.editing
+      ? (form.runLen === 1 ? `Hoje ${what} está só neste mês.` : `Hoje ${what} está em ${form.runLen} meses seguidos a partir deste.`) + " Aumente o número para lançar nos meses seguintes."
+      : `1 = só este mês. Com 12, ${what} entra em cada um dos próximos 12 meses.`;
     $("fSplit").querySelectorAll("[data-split]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.split === form.split)));
     $("fDesc").placeholder = form.kind === "entrada" ? "Ex.: Salário" : form.kind === "conta" ? "Ex.: Luz" : "Ex.: Mercado";
     const p = placement();
@@ -887,6 +890,9 @@ html.locked body { overflow: hidden; }
     for (const [m, ids] of Object.entries(by)) await save(m, fn(itemsOf(m), ids));
     return Object.values(by).reduce((a, x) => a + x.size, 0);
   }
+  // mesma série: mesma repetição (group) ou, sem repetição, o mesmo nome e tipo
+  const sameSeries = (item, i) => i.id !== item.id && i.kind === item.kind && !i.inst && !!i.res === !!item.res &&
+    (item.group ? i.group === item.group : !i.group && i.desc.trim().toLowerCase() === item.desc.trim().toLowerCase());
   let delArmed = false;
   function openForm(ym, id) {
     const i = id ? itemsOf(ym).find(x => x.id === id) : null;
@@ -902,6 +908,10 @@ html.locked body { overflow: hidden; }
       form.editDate = $("fDate").value;
       $("fTitle").textContent = SIMPLE[kindOf(i)] || "Editar"; $("fDel").hidden = false; $("fDel").textContent = "Excluir"; delArmed = false;
       const n = seriesAfter(ym, i).length;
+      // quantos meses seguidos, a partir deste, já têm esta conta ou entrada
+      form.runLen = 1;
+      while (form.runLen < 120 && itemsOf(shiftMonth(ym, form.runLen)).some(x => sameSeries(i, x))) form.runLen++;
+      $("fRepeat").value = String(form.runLen);
       form.scope = "one"; $("rowScope").hidden = !n;
       $("scopeNext").textContent = `Este e os próximos (${n + 1} meses)`;
       $("fScope").querySelectorAll("[data-scope]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scope === "one")));
@@ -1002,7 +1012,19 @@ html.locked body { overflow: hidden; }
           const { desc: d2, amount: a2, method: m2, renan: r2 } = base;
           more = await applyToSeries(ym, item, (list, ids) => list.map(i => ids.has(i.id) ? { ...i, desc: d2, amount: a2, method: m2, renan: r2 } : i));
         }
-        toast(more ? `Alteração salva neste e em mais ${more} ${more === 1 ? "mês" : "meses"}.` : "Alteração salva.");
+        // repetir: lança nos meses seguintes que ainda não têm esta conta ou entrada
+        let added = 0;
+        if ((kind === "fixed" || kind === "in") && !item.inst) {
+          const reps = Math.max(1, Math.min(120, parseInt($("fRepeat").value, 10) || 1));
+          for (let k = 1; k < reps; k++) {
+            const m = shiftMonth(p.ym, k);
+            if (itemsOf(m).some(x => sameSeries(merged, x))) continue;
+            const { pm, ...copy } = merged;
+            await save(m, itemsOf(m).concat({ ...copy, id: newId(), paid: false }));
+            added++;
+          }
+        }
+        toast([more ? `alterada em mais ${more} ${more === 1 ? "mês" : "meses"}` : "", added ? `lançada em mais ${added} ${added === 1 ? "mês" : "meses"}` : ""].filter(Boolean).join(" e ").replace(/^./, c => c.toUpperCase()) || "Alteração salva.");
       } else {
         base.cat = kind === "in" ? "Salário" : window.LivroCaixaImport ? LivroCaixaImport.guessCat(desc) : "Outros";
         const n = onCard && kind === "var" ? Math.max(1, Math.min(48, parseInt($("fInst").value, 10) || 1)) : 1;

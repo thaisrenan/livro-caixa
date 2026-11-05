@@ -51,4 +51,5 @@ Seja objetivo. Ao terminar, informe brevemente o que foi feito, arquivos alterad
 
 * PWA em HTML, CSS e JavaScript puros, publicado no GitHub Pages (https://thaisrenan.github.io/livro-caixa/). Arquivos: `index.html` (interface e regras), `vault.js` (PIN, criptografia e sincronização com o Supabase), `sw.js` (aumente `VERSION` a cada publicação), `config.js`, `supabase*.sql`.
 * O repositório é público: nunca grave dados financeiros da usuária nele. Preserve o formato dos dados (um documento por mês com `items`).
-* Rotina que o app segue: o salário cai no último dia útil do mês; nesse dia saem as faturas (Itaú, Mercado Pago, cartão do Renan), as contas do mês e as do mês seguinte pagas adiantado. A sobra paga o dia a dia do mês seguinte.
+* Cada conta tem um perfil em `settings.profile` (nome, dia do salário, cartões com fechamento/vencimento e com quem divide). Sem perfil salvo, vale o `LEGACY` do `index.html`, que é a rotina original abaixo. Contas novas passam pelo assistente de primeiro acesso.
+* Rotina original que o app segue: o salário cai no último dia útil do mês; nesse dia saem as faturas (Itaú, Mercado Pago, cartão do Renan), as contas do mês e as do mês seguinte pagas adiantado. A sobra paga o dia a dia do mês seguinte.

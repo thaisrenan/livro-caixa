@@ -197,7 +197,7 @@ section[aria-labelledby="hRes"], section[aria-labelledby="hYield"] { background:
 .sublist .line { padding: 9px 0; font-size: var(--fs-md); }
 .sublist .line .name { font-weight: 400; }
 .bk { display: inline-grid; place-items: center; min-width: 24px; height: 17px; padding: 0 5px; border-radius: 4px; font-size: 0.625rem; font-weight: 800; color: #fff; text-transform: lowercase; margin-right: 7px; letter-spacing: 0.02em; }
-.b-itau { background: #ec7000; } .b-mp { background: #009ee3; } .b-renan { background: #5f6a76; text-transform: none; }
+
 
 /* renan e reserva */
 .renan-box { display: grid; gap: 8px; padding: 14px 0 10px; }
@@ -399,6 +399,17 @@ html.privacy .ychart rect title { display: none; }
 .swatches { display: flex; gap: 10px; margin-top: 4px; }
 .swatches button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--sw); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .25); transition: transform .15s; }
 .swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink); transform: scale(1.06); }
+/* perfil */
+.pf-cards { display: grid; gap: 8px; }
+.pf-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; background: var(--sheet-2); border-radius: 12px; padding: 8px 10px; }
+.pf-card .bk { margin: 0; }
+.pf-card .lock-text { padding: 8px 10px; }
+.pf-card label { display: grid; font-size: var(--fs-xs); color: var(--muted); text-align: center; gap: 2px; }
+.pf-card label input { width: 3em; padding: 6px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); text-align: center; }
+.pf-card .pf-own { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; text-align: left; font-size: var(--fs-sm); color: var(--ink); }
+.pf-card .pf-own input { width: 18px; height: 18px; padding: 0; flex: none; accent-color: var(--accent); }
+.pf-x { border: 0; background: none; color: var(--muted); font-size: 1.3rem; padding: 4px 6px; }
+.pf-x:hover { color: var(--out); }
 /* confete */
 .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 120; }
 /* retrospectiva do ano, em telas que passam como stories */
@@ -542,9 +553,9 @@ html.privacy .story-card .v { filter: blur(10px); }
   </section>
 
   <section class="block" aria-labelledby="hRenan">
-    <div class="block-head"><h2 id="hRenan">Acerto com o Renan</h2></div>
+    <div class="block-head"><h2 id="hRenan">Acerto da divisão</h2></div>
     <div class="renan-box">
-      <span class="hint">O Renan te deve hoje</span>
+      <span class="hint" id="owedLbl">Te deve hoje</span>
       <span class="owed num" id="owed">—</span>
       <span class="hint" id="owedSub"></span>
       <div id="renanLists"></div>
@@ -555,9 +566,9 @@ html.privacy .story-card .v { filter: blur(10px); }
   </section>
 
   <section class="block" aria-labelledby="hBal">
-    <div class="block-head"><h2 id="hBal">Saldo com o Renan</h2></div>
+    <div class="block-head"><h2 id="hBal">Saldo da divisão</h2></div>
     <div id="balBox"></div>
-    <div class="row" style="padding:4px 0 8px"><button class="btn" id="oweAdd" type="button">+ O que eu devo a ele</button></div>
+    <div class="row" style="padding:4px 0 8px"><button class="btn" id="oweAdd" type="button">+ O que eu devo</button></div>
   </section>
 
   <section class="block" aria-labelledby="hRes">
@@ -616,8 +627,8 @@ html.privacy .story-card .v { filter: blur(10px); }
       <div class="chips" id="fScope"><button type="button" data-scope="one" aria-pressed="true">Só este mês</button><button type="button" data-scope="next" aria-pressed="false" id="scopeNext">Este e os próximos</button></div>
     </div>
     <label class="field" id="rowRepeat" hidden><span>Repetir por quantos meses</span><input id="fRepeat" inputmode="numeric" value="1" maxlength="2" aria-describedby="repeatHint"><small class="hint" id="repeatHint"></small></label>
-    <div class="field" id="rowSplit"><span class="flabel">Dividir com o Renan</span>
-      <div class="chips" id="fSplit"><button type="button" data-split="0" aria-pressed="true">Não</button><button type="button" data-split="half" aria-pressed="false">Metade</button><button type="button" data-split="all" aria-pressed="false">É tudo dele</button></div>
+    <div class="field" id="rowSplit"><span class="flabel" id="splitLbl">Dividir</span>
+      <div class="chips" id="fSplit"><button type="button" data-split="0" aria-pressed="true">Não</button><button type="button" data-split="half" aria-pressed="false">Metade</button><button type="button" data-split="all" aria-pressed="false" id="splitAll">É tudo da pessoa</button></div>
     </div>
     <p class="where" id="fWhere"></p>
     <p class="msg" id="fMsg" role="alert"></p>
@@ -667,9 +678,9 @@ html.privacy .story-card .v { filter: blur(10px); }
       <div class="importbox" id="backupBox" hidden></div>
     </section>
     <section class="set-sec">
-      <h3>Fechamento dos cartões</h3>
-      <p class="hint">Compras depois desse dia entram na fatura do mês seguinte.</p>
-      <div id="closingList" style="display:grid;gap:8px"></div>
+      <h3>Meu perfil</h3>
+      <p class="hint" id="pfSummary"></p>
+      <div class="row"><button class="btn" id="pfOpen" type="button">Editar salário, cartões e divisão</button></div>
     </section>
     <section class="set-sec">
       <h3>Segurança</h3>
@@ -678,6 +689,30 @@ html.privacy .story-card .v { filter: blur(10px); }
       <p class="hint" id="discMsg"></p>
     </section>
     <p class="hint" id="appVersion" style="text-align:center"></p>
+  </div>
+</dialog>
+
+<dialog id="profileDlg" class="box" aria-labelledby="pfTitle">
+  <div class="rep">
+    <div class="panel-head"><h2 id="pfTitle">Meu perfil</h2><button class="icon-btn" id="pfClose" type="button">Fechar</button></div>
+    <p class="hint" id="pfIntro"></p>
+    <label class="field"><span>Seu nome</span><input id="pfName" class="lock-text" autocomplete="given-name" placeholder="Ex.: Ana"></label>
+    <div class="field"><span>Quando cai o seu salário</span>
+      <div class="seg" id="pfPay" role="group"><button type="button" data-pay="lastBiz">Último dia útil</button><button type="button" data-pay="day">Dia fixo</button></div>
+      <label class="close-row" id="pfDayRow" hidden><span>Todo dia</span><input id="pfDay" inputmode="numeric" maxlength="2" aria-label="Dia do salário"></label>
+      <small class="hint" id="pfPayHint"></small>
+    </div>
+    <div class="field"><span>Divide gastos com alguém?</span>
+      <div class="seg" id="pfSplit" role="group"><button type="button" data-ps="no">Não</button><button type="button" data-ps="yes">Sim</button></div>
+      <input id="pfPartner" class="lock-text" placeholder="Nome da pessoa" aria-label="Nome da pessoa com quem divide" hidden>
+    </div>
+    <div class="field"><span>Cartões de crédito</span>
+      <div id="pfCards" class="pf-cards"></div>
+      <div class="row"><button class="btn small" id="pfAddCard" type="button">+ Adicionar cartão</button></div>
+      <small class="hint">Fecha: compras depois desse dia vão para a fatura seguinte. Vence: dia de pagar a fatura (se deixar em branco, ela é paga no dia do salário).</small>
+    </div>
+    <p class="msg" id="pfMsg" role="alert"></p>
+    <div class="actions"><button class="btn primary" id="pfSave" type="button">Salvar</button></div>
   </div>
 </dialog>
 
@@ -712,22 +747,40 @@ html.privacy .story-card .v { filter: blur(10px); }
   const full = (l) => l.reduce((a, i) => a + i.amount, 0);
   const renanOf = (l) => l.reduce((a, i) => a + (i.renan || 0), 0);
 
-  // o salário cai no último dia útil do mês; nesse dia saem as faturas e as contas
+  // ---------- perfil de cada conta: dia do salário, cartões e com quem divide ----------
+  // contas antigas (sem perfil salvo) seguem a rotina original: salário no último dia útil, Itaú, Mercado Pago e cartão do Renan
+  const LEGACY = { name: "", payday: { type: "lastBiz" }, partner: "Renan", debit: "Débito Thais", cards: [
+    { id: "itau", name: "Itaú", method: "Crédito Thais Itaú", closing: 25, color: "#ec7000", tag: "itaú", alias: "ita[uú]" },
+    { id: "mp", name: "Mercado Pago", method: "Crédito Thais Mercado Pago", closing: 25, color: "#009ee3", tag: "mp", alias: "mercado ?pago" },
+    { id: "renan", name: "Renan", label: "Cartão do Renan", method: "Crédito Renan", closing: 25, color: "#5f6a76", tag: "R", partner: true, alias: "renan" }] };
+  const profile = () => state.settings.profile || LEGACY;
+  const hasPartner = () => !!profile().partner;
+  const P = () => profile().partner || "a outra pessoa";
+  const cardsList = () => profile().cards || [];
+  // o nome exato do cartão; nas contas antigas, também variações como "Crédito Itau"
+  const cardOf = (m) => m ? cardsList().find(c => c.method === m) || cardsList().find(c => c.alias && new RegExp(c.alias, "i").test(m)) : undefined;
+  const cardMethod = (id) => (cardsList().find(c => c.id === id) || {}).method;
+  const partnerCard = () => cardsList().find(c => c.partner);
+  const debitMethod = () => profile().debit || "Débito";
+
+  const bizBack = (d) => { while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1); return d; };
+  // dia do salário que abre o ciclo ym. Último dia útil: no próprio mês. Dia fixo a partir de 16: no próprio mês;
+  // até o dia 15: no mês seguinte (o salário de 5/11 paga novembro, como o de 30/10 paga novembro na rotina original)
   function lastBizDay(ym) {
-    const [y, m] = ym.split("-").map(Number);
-    const d = new Date(y, m, 0);
-    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() - 1);
-    return d;
+    const pd = profile().payday || { type: "lastBiz" };
+    const [y, m] = (pd.type === "day" && pd.day <= 15 ? shiftMonth(ym, 1) : ym).split("-").map(Number);
+    const last = new Date(y, m, 0).getDate();
+    return bizBack(new Date(y, m - 1, pd.type === "day" ? Math.min(pd.day, last) : last));
   }
-  // a qual salário uma data pertence: o do próprio mês a partir do dia em que ele cai, senão o do mês anterior
-  const salaryMonthOf = (d) => d >= lastBizDay(ymOf(d)) ? ymOf(d) : shiftMonth(ymOf(d), -1);
+  // a qual salário uma data pertence: o último que caiu até ela
+  const salaryMonthOf = (d) => { let ym = shiftMonth(ymOf(d), 1); for (let k = 0; k < 4 && d < lastBizDay(ym); k++) ym = shiftMonth(ym, -1); return ym; };
 
   const isCard = (i) => /^cr[eé]dito/i.test(i.method || "");
   const ADV_RE = /aluguel|faculdade|celular|claro|vivo|\btim\b|condom|escola|mensalidade|internet/i;
   const isAdvance = (i) => i.kind === "fixed" && !isCard(i) && (typeof i.adv === "boolean" ? i.adv : ADV_RE.test(i.desc));
-  const CARDS = { itau: "Crédito Thais Itaú", mp: "Crédito Thais Mercado Pago", renan: "Crédito Renan" };
-  const cardName = (m) => /ita[uú]/i.test(m) ? "Fatura Itaú" : /mercado ?pago/i.test(m) ? "Fatura Mercado Pago" : /renan/i.test(m) ? "Cartão do Renan" : m;
-  const badge = (m) => /ita[uú]/i.test(m) ? `<span class="bk b-itau">itaú</span>` : /mercado ?pago/i.test(m) ? `<span class="bk b-mp">mp</span>` : /renan/i.test(m) ? `<span class="bk b-renan">R</span>` : "";
+  const cardLabel = (c) => c.label || (c.partner ? `${c.name} de ${P()}` : `Cartão ${c.name}`);
+  const cardName = (m) => { const c = cardOf(m); return !c ? String(m || "").replace(/^cr[eé]dito\s*/i, "Fatura ") : c.partner ? cardLabel(c) : `Fatura ${c.name}`; };
+  const badge = (m) => { const c = cardOf(m); return c ? `<span class="bk" style="background:${esc(c.color || "#5f6a76")}">${esc(c.tag || c.name.slice(0, 2).toLowerCase())}</span>` : ""; };
 
   const state = { months: {}, settings: {}, month: null, open: {} };
   let store = null;
@@ -757,7 +810,16 @@ html.privacy .story-card .v { filter: blur(10px); }
     return v;
   }
 
+  // nomes e blocos que dependem do perfil
+  function applyProfile() {
+    const on = hasPartner(), n = P();
+    document.querySelectorAll('section[aria-labelledby="hRenan"], section[aria-labelledby="hBal"]').forEach(el => { el.hidden = !on; });
+    $("hRenan").textContent = `Acerto com ${n}`; $("hBal").textContent = `Saldo com ${n}`;
+    $("owedLbl").textContent = `${n} te deve hoje`; $("oweAdd").textContent = `+ O que eu devo a ${n}`;
+    $("splitLbl").textContent = `Dividir com ${n}`; $("splitAll").textContent = `É tudo de ${n}`;
+  }
   function render() {
+    applyProfile();
     if (!state.month) state.month = shiftMonth(salaryMonthOf(today0()), 1);
     const v = monthView(state.month), t0 = today0();
     $("title").innerHTML = state.view === "year" ? "12 meses" : state.view === "arch" ? "Anos" : `${monthOnly(v.N).replace(/^./, c => c.toUpperCase())} <span class="yr">${v.N.slice(0, 4)}</span>`;
@@ -787,7 +849,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     if (v.renan) {
       const open = state.open.renan;
       const parts = [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0]), ...v.daily].filter(i => i.renan);
-      h += `<div class="line nocheck tap renan" data-toggle="renan"><div><div class="name">Renan te passa</div><div class="meta">${open ? "fechar" : "ver de quê"}</div></div><span class="val num">${fmt(v.renan)}</span></div>` +
+      h += `<div class="line nocheck tap renan" data-toggle="renan"><div><div class="name">${esc(P())} te passa</div><div class="meta">${open ? "fechar" : "ver de quê"}</div></div><span class="val num">${fmt(v.renan)}</span></div>` +
         (open ? `<div class="sublist">${parts.map(i => `<div class="line nocheck"><span class="name">${esc(i.desc)}</span><span class="val num">${fmt(i.renan)}</span></div>`).join("")}</div>` : "");
     }
     $("listIn").innerHTML = h;
@@ -796,7 +858,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     // contas do dia do salário
     $("hBills").textContent = `Contas do dia ${ddmm(v.payday)}`;
     const tick = (checked, attrs, label) => `<button type="button" class="tick" role="checkbox" aria-checked="${checked}" aria-label="${esc(label)}" ${attrs}>${checked === "true" ? "✓" : checked === "mixed" ? "–" : ""}</button>`;
-    const order = [CARDS.itau, CARDS.mp, CARDS.renan];
+    const order = cardsList().map(c => c.method);
     const names = Object.keys(v.cards).sort((a, b) => ((order.indexOf(a) + 1) || 9) - ((order.indexOf(b) + 1) || 9));
     h = names.map(m => {
       const list = v.cards[m], paid = list.filter(i => i.paid).length, st = paid === list.length ? "true" : paid ? "mixed" : "false";
@@ -807,7 +869,7 @@ html.privacy .story-card .v { filter: blur(10px); }
         (open ? `<div class="sublist">${list.slice().sort((a, b) => b.amount - a.amount).map(i => lineEdit(i, v.M, esc(i.desc) + (i.inst ? ` (${esc(i.inst)})` : ""), i.day ? `${pad(i.day)}/${(i.pm || v.M).slice(5)}` : "")).join("")}</div>` : "");
     }).join("");
     h += v.bills.map(([i, ym]) => `<div class="line${i.paid ? " done" : ""}">${tick(String(!!i.paid), `data-paid="${ym}|${i.id}"`, i.desc + " paga")}
-        <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${esc(i.desc)}</div>${i.renan ? `<div class="meta">Renan ${fmt(i.renan)}</div>` : ""}</div><span class="val num">${fmt(i.amount)}</span></div>`).join("");
+        <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${esc(i.desc)}</div>${i.renan ? `<div class="meta">${esc(P())} ${fmt(i.renan)}</div>` : ""}</div><span class="val num">${fmt(i.amount)}</span></div>`).join("");
     $("listBills").innerHTML = h || `<p class="empty">Nada lançado para pagar em ${ddmm(v.payday)}.</p>`;
     $("totBills").textContent = fmt(v.totBills);
 
@@ -850,22 +912,22 @@ html.privacy .story-card .v { filter: blur(10px); }
   function renderRenan() {
     const L = renanLedger();
     countTo($("owed"), Math.max(0, L.total));
-    $("owedSub").textContent = L.total < 0 ? `Ele te pagou ${fmt(-L.total)} a mais.` : L.pending.length ? `${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"}. Marque o quadradinho quando ele pagar.` : "Nada pendente.";
-    const share = (i) => i.renan === i.amount ? `tudo dele, de ${fmt(i.amount)}` : i.renan === Math.round(i.amount / 2) ? `metade de ${fmt(i.amount)}` : `parte de ${fmt(i.amount)}`;
+    $("owedSub").textContent = L.total < 0 ? `${P()} te pagou ${fmt(-L.total)} a mais.` : L.pending.length ? `${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"}. Marque o quadradinho quando ${esc(P())} pagar.` : "Nada pendente.";
+    const share = (i) => i.renan === i.amount ? `tudo de ${P()}, de ${fmt(i.amount)}` : i.renan === Math.round(i.amount / 2) ? `metade de ${fmt(i.amount)}` : `parte de ${fmt(i.amount)}`;
     const line = ({ i, d, ym, left }) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${ddmm(d)} · ${esc(i.desc)}</div><div class="meta">${left != null && left < i.renan ? `falta ${fmt(left)} · ` : ""}${share(i)}</div></div><span class="val num">${fmt(left != null ? left : i.renan)}</span></div>`;
     const group = (key, title, list, body) => !list.length ? "" : `<div class="line nocheck tap" data-toggle="${key}"><div class="name">${title}</div><span class="meta">${state.open[key] ? "fechar" : "ver"}</span></div>${state.open[key] ? `<div class="sublist">${body}</div>` : ""}`;
-    const tickLine = ({ i, d, ym, left }) => `<div class="line${i.renanPaid ? " done" : ""}"><button type="button" class="tick" role="checkbox" aria-checked="${!!i.renanPaid}" aria-label="O Renan pagou ${esc(i.desc)}" data-rpaid="${ym}|${i.id}">${i.renanPaid ? "✓" : ""}</button>
+    const tickLine = ({ i, d, ym, left }) => `<div class="line${i.renanPaid ? " done" : ""}"><button type="button" class="tick" role="checkbox" aria-checked="${!!i.renanPaid}" aria-label="${esc(P())} pagou ${esc(i.desc)}" data-rpaid="${ym}|${i.id}">${i.renanPaid ? "✓" : ""}</button>
         <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${ddmm(d)} · ${esc(i.desc)}</div><div class="meta">${left != null && left < i.renan ? `falta ${fmt(left)} · ` : ""}${share(i)}</div></div><span class="val num">${fmt(left != null && !i.renanPaid ? left : i.renan)}</span></div>`;
-    let h = L.pending.length ? `<div class="flabel" style="margin-top:4px">Pendente · marque quando ele pagar</div>${L.pending.map(tickLine).join("")}` : "";
-    h += group("done", `Já pagas por ele (${L.done.length})`, L.done, L.done.map(tickLine).join(""));
-    h += group("pays", `Pagamentos avulsos (${fmt(L.paid)})`, L.pays, L.pays.map(({ i, d, ym }) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${ddmm(d)} · Pagamento do Renan</div><div class="meta">toque para corrigir</div></div><span class="val num">${fmt(i.amount)}</span></div>`).join(""));
+    let h = L.pending.length ? `<div class="flabel" style="margin-top:4px">Pendente · marque quando ${esc(P())} pagar</div>${L.pending.map(tickLine).join("")}` : "";
+    h += group("done", `Já pagas por ${esc(P())} (${L.done.length})`, L.done, L.done.map(tickLine).join(""));
+    h += group("pays", `Pagamentos avulsos (${fmt(L.paid)})`, L.pays, L.pays.map(({ i, d, ym }) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${ddmm(d)} · Pagamento de ${esc(P())}</div><div class="meta">toque para corrigir</div></div><span class="val num">${fmt(i.amount)}</span></div>`).join(""));
     h += group("upcoming", `Ainda vai vencer (${fmt(L.upcoming.reduce((a, x) => a + x.i.renan, 0))})`, L.upcoming, L.upcoming.map(line).join(""));
     $("renanLists").innerHTML = h;
   }
   $("reportBtn").addEventListener("click", () => {
     const L = renanLedger();
     const lines = L.pending.map(({ i, d, left }) => `• ${ddmm(d)} ${i.desc}: ${left < i.renan ? `falta ${fmt(left)} de ${fmt(i.renan)}` : fmt(left)}`);
-    let text = `*Acerto Renan*\n\n${lines.join("\n") || "Nada pendente."}\n`;
+    let text = `*Acerto ${P()}*\n\n${lines.join("\n") || "Nada pendente."}\n`;
     text += `\n*${L.total >= 0 ? `Total que você me deve: ${fmt(L.total)}` : `Eu te devo: ${fmt(-L.total)}`}*`;
     navigator.clipboard.writeText(text).then(() => toast("Resumo copiado. É só colar no WhatsApp."), () => toast("Não consegui copiar."));
   });
@@ -952,7 +1014,7 @@ html.privacy .story-card .v { filter: blur(10px); }
         <div><span><b class="dot" style="background:var(--accent-2)"></b>Variáveis</span><strong class="num">${fmt(varb)}</strong><small>${pc(varb)}% · compras do dia a dia</small></div></div></div>
       <div class="cats">${cats.map(([c, x], k) => `<div class="cat"><div class="cat-top"><span>${esc(c)}</span><span class="num">${fmt(x)} <small>${pc(x)}%</small></span></div>
         <div class="cat-bar"><i style="width:${(x / max * 100).toFixed(1)}%;background:${k < 6 ? CAT_COLORS[k] : "var(--neutral)"}"></i></div></div>`).join("")}</div>
-      <p class="hint" style="padding:4px 0 10px">${mine ? "Só a sua parte: tira o que o Renan paga." : "Valor cheio, incluindo a parte do Renan."} Total ${fmt(total)}.</p>`;
+      <p class="hint" style="padding:4px 0 10px">${mine ? `Só a sua parte: tira o que ${P()} paga.` : `Valor cheio, incluindo a parte de ${P()}.`} Total ${fmt(total)}.</p>`;
   }
   $("catMode").addEventListener("click", (e) => { const b = e.target.closest("[data-cm]"); if (!b) return; state.catMode = b.dataset.cm; renderCats(monthView(state.month)); });
 
@@ -1012,21 +1074,21 @@ html.privacy .story-card .v { filter: blur(10px); }
       const d = lastBizDay(ym);
       // só os últimos 2 meses: o histórico da planilha tem faturas antigas sem a marca de pago
       if (d > t0 || days(d, t0) > 62) continue;
-      const unpaid = itemsOf(ym).filter(i => (i.kind === "fixed" || i.kind === "var") && i.method === CARDS.renan && !i.paid);
+      const unpaid = itemsOf(ym).filter(i => (i.kind === "fixed" || i.kind === "var") && i.method === (partnerCard() || {}).method && !i.paid);
       if (unpaid.length) cardDue.push({ ym, d, amount: full(unpaid), n: unpaid.length });
     }
     const his = Math.max(0, L.total), mine = full(open.map(x => x.i)) + cardDue.reduce((a, x) => a + x.amount, 0), net = his - mine;
     const nMine = open.length + cardDue.length;
-    const tickOwe = ({ i, d, ym }) => `<div class="line${i.owePaid ? " done" : ""}"><button type="button" class="tick" role="checkbox" aria-checked="${!!i.owePaid}" aria-label="Paguei ${esc(i.desc)} ao Renan" data-opaid="${ym}|${i.id}">${i.owePaid ? "✓" : ""}</button>
+    const tickOwe = ({ i, d, ym }) => `<div class="line${i.owePaid ? " done" : ""}"><button type="button" class="tick" role="checkbox" aria-checked="${!!i.owePaid}" aria-label="Paguei ${esc(i.desc)} a ${esc(P())}" data-opaid="${ym}|${i.id}">${i.owePaid ? "✓" : ""}</button>
         <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${ddmm(d)} · ${esc(i.desc)}</div><div class="meta">${i.owePaid ? "você já pagou" : "toque no quadradinho quando pagar"}</div></div><span class="val num">${fmt(i.amount)}</span></div>`;
     const hisLines = L.pending.map(({ i, d, left }) => `<div class="line nocheck"><span class="name">${ddmm(d)} · ${esc(i.desc)}</span><span class="val num">${fmt(left)}</span></div>`).join("");
-    let h = `<div class="line nocheck tap renan" data-toggle="balHis"><div><div class="name">Ele te deve</div><div class="meta">${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"} do acerto · ${state.open.balHis ? "fechar" : "ver quais"}</div></div><span class="val num">${fmt(his)}</span></div>`;
+    let h = `<div class="line nocheck tap renan" data-toggle="balHis"><div><div class="name">${esc(P())} te deve</div><div class="meta">${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"} do acerto · ${state.open.balHis ? "fechar" : "ver quais"}</div></div><span class="val num">${fmt(his)}</span></div>`;
     if (state.open.balHis) h += `<div class="sublist">${hisLines || `<p class="empty">Nada pendente.</p>`}</div>`;
-    const cardLine = ({ ym, d, amount, n }) => `<div class="line"><button type="button" class="tick" role="checkbox" aria-checked="false" aria-label="Mandei o dinheiro do cartão do Renan de ${ddmm(d)}" data-cardpay="${ym}">${""}</button>
-        <div><div class="name">${ddmm(d)} · ${badge(CARDS.renan)}Cartão do Renan</div><div class="meta">${n} ${n === 1 ? "compra" : "compras"} · marque quando mandar o dinheiro</div></div><span class="val num">${fmt(amount)}</span></div>`;
-    h += `<div class="line nocheck tap" data-toggle="balMine"><div><div class="name">Você deve a ele</div><div class="meta">${nMine} ${nMine === 1 ? "item" : "itens"}${cardDue.length ? " (inclui o cartão dele)" : ""} · ${state.open.balMine ? "fechar" : "ver quais"}</div></div><span class="val num" style="color:var(--out)">− ${fmt(mine)}</span></div>`;
-    if (state.open.balMine) h += `<div class="sublist">${cardDue.map(cardLine).join("")}${open.map(tickOwe).join("")}${!nMine ? `<p class="empty">Nada pendente. O cartão do Renan entra aqui sozinho depois do dia do salário, até você marcar como pago.</p>` : ""}${done.length ? `<div class="flabel" style="margin-top:8px">Já pagos</div>${done.map(tickOwe).join("")}` : ""}</div>`;
-    h += `<div class="line nocheck" style="border-top:2px solid var(--ink)"><div class="name">${net > 0 ? "Ele tem que te pagar" : net < 0 ? "Você tem que pagar a ele" : "Vocês estão quites"}</div><span class="val num" style="font-family:var(--font-display);font-size:1.3rem;color:${net >= 0 ? "var(--renan)" : "var(--out)"}">${fmt(Math.abs(net))}</span></div>`;
+    const cardLine = ({ ym, d, amount, n }) => `<div class="line"><button type="button" class="tick" role="checkbox" aria-checked="false" aria-label="Mandei o dinheiro do cartão de ${esc(P())} de ${ddmm(d)}" data-cardpay="${ym}">${""}</button>
+        <div><div class="name">${ddmm(d)} · ${badge((partnerCard() || {}).method)}${partnerCard() ? cardLabel(partnerCard()) : ""}</div><div class="meta">${n} ${n === 1 ? "compra" : "compras"} · marque quando mandar o dinheiro</div></div><span class="val num">${fmt(amount)}</span></div>`;
+    h += `<div class="line nocheck tap" data-toggle="balMine"><div><div class="name">Você deve a ${esc(P())}</div><div class="meta">${nMine} ${nMine === 1 ? "item" : "itens"}${cardDue.length ? ` (inclui o cartão de ${esc(P())})` : ""} · ${state.open.balMine ? "fechar" : "ver quais"}</div></div><span class="val num" style="color:var(--out)">− ${fmt(mine)}</span></div>`;
+    if (state.open.balMine) h += `<div class="sublist">${cardDue.map(cardLine).join("")}${open.map(tickOwe).join("")}${!nMine ? `<p class="empty">Nada pendente.${partnerCard() ? ` O ${esc(cardLabel(partnerCard()).toLowerCase())} entra aqui sozinho depois do dia do salário, até você marcar como pago.` : ""}</p>` : ""}${done.length ? `<div class="flabel" style="margin-top:8px">Já pagos</div>${done.map(tickOwe).join("")}` : ""}</div>`;
+    h += `<div class="line nocheck" style="border-top:2px solid var(--ink)"><div class="name">${net > 0 ? `${esc(P())} tem que te pagar` : net < 0 ? `Você tem que pagar a ${esc(P())}` : "Vocês estão quites"}</div><span class="val num" style="font-family:var(--font-display);font-size:1.3rem;color:${net >= 0 ? "var(--renan)" : "var(--out)"}">${fmt(Math.abs(net))}</span></div>`;
     $("balBox").innerHTML = h;
   }
   $("oweAdd").addEventListener("click", () => { form.kind = "devo"; openForm(); setTimeout(() => $("fDesc").focus(), 50); });
@@ -1096,10 +1158,10 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("aFileHint").textContent = `${nItems} lançamentos de janeiro a dezembro de ${Y}. A planilha abre no Excel ou no Google Planilhas; o backup pode ser restaurado em ⚙. Nada é apagado do app.`;
   }
   $("aYears").addEventListener("click", (e) => { const b = e.target.closest("[data-y]"); if (!b) return; state.archYear = +b.dataset.y; renderArch(); });
-  const KIND_TXT = { in: "Entrada", fixed: "Conta", var: "Gasto", invest: "Guardou na reserva", settle: "Acerto com o Renan", owe: "Devo ao Renan" };
+  const KIND_TXT = { in: "Entrada", fixed: "Conta", var: "Gasto", invest: "Guardou na reserva", settle: "Acerto da divisão", owe: "Devo na divisão" };
   $("aCsv").addEventListener("click", () => {
     const Y = state.archYear, n = (c) => ((c || 0) / 100).toFixed(2).replace(".", ","), q = (x) => `"${String(x ?? "").replace(/"/g, '""')}"`;
-    const lines = [["Mês", "Data", "Tipo", "Descrição", "Categoria", "Forma de pagamento", "Valor", "Parte do Renan", "Parcela", "Pago"].join(";")];
+    const lines = [["Mês", "Data", "Tipo", "Descrição", "Categoria", "Forma de pagamento", "Valor", `Parte de ${P()}`, "Parcela", "Pago"].join(";")];
     for (let k = 1; k <= 12; k++) {
       const ym = `${Y}-${pad(k)}`;
       itemsOf(ym).slice().sort((a, b) => (a.day || 0) - (b.day || 0)).forEach(i => {
@@ -1153,10 +1215,10 @@ html.privacy .story-card .v { filter: blur(10px); }
       itemsOf(r.M).forEach(i => { if (isReserve(i) && itemDate(i, r.M) > t0) fut.push({ v: i.kind === "invest" ? i.amount : -i.amount, d: itemDate(i, r.M) }); });
       if (r.sug) fut.push({ v: r.sug, d: lastBizDay(r.M) });
     });
-    const P = lotsYield([...now, ...fut], end), futIn = fut.reduce((a, l) => a + l.v, 0);
+    const Pj = lotsYield([...now, ...fut], end), futIn = fut.reduce((a, l) => a + l.v, 0);
     // "hoje" já inclui o que rendeu até agora; daqui para a frente: o bruto que falta e o IR de tudo
-    const sofar = resNow == null ? 0 : reserveBalance.earned || 0, gross = P.gross - sofar;
-    const net = gross - P.ir, final = (resNow || 0) + futIn + net, yc = yieldCfg();
+    const sofar = resNow == null ? 0 : reserveBalance.earned || 0, gross = Pj.gross - sofar;
+    const net = gross - Pj.ir, final = (resNow || 0) + futIn + net, yc = yieldCfg();
     $("yRes").textContent = resNow == null ? fmt0(futIn + net) + " a mais" : fmt0(final);
     $("yResMeta").textContent = (resNow == null ? "Informe o saldo da caixinha na aba Mês para ver o total. " : "") + `já tirando o IR, em ${endTxt}`;
     const rw = (x) => (Math.max(0, x) / Math.max(1, (resNow || 0) + Math.max(0, futIn) + Math.max(0, net)) * 100).toFixed(1);
@@ -1165,7 +1227,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       ${resNow == null ? "" : `<div class="line nocheck"><span class="name"><b class="dot" style="background:var(--neutral)"></b> Hoje na caixinha</span><span class="val num">${fmt0(resNow)}</span></div>`}
       <div class="line nocheck"><span class="name"><b class="dot" style="background:var(--accent)"></b> Vai guardar</span><span class="val num">${futIn >= 0 ? "+ " : "− "}${fmt0(Math.abs(futIn))}</span></div>
       <div class="line nocheck"><span class="name"><b class="dot" style="background:transparent"></b> Vai render (bruto)</span><span class="val num">+ ${fmt0(gross)}</span></div>
-      <div class="line nocheck"><span class="name"><b class="dot" style="background:transparent"></b> IR estimado</span><span class="val num" style="color:var(--out)">− ${fmt0(P.ir)}</span></div>
+      <div class="line nocheck"><span class="name"><b class="dot" style="background:transparent"></b> IR estimado</span><span class="val num" style="color:var(--out)">− ${fmt0(Pj.ir)}</span></div>
       <div class="line nocheck"><span class="name"><b class="dot" style="background:var(--accent-2)"></b> Rendimento líquido até lá</span><span class="val num" style="color:var(--in)">+ ${fmt0(net)}</span></div>
       <div class="line nocheck total"><span class="name">${resNow == null ? "A mais" : "Total"} em ${endTxt}</span><span class="val num">${fmt0(resNow == null ? futIn + net : final)}</span></div>
       <details class="how"><summary>Como é calculado</summary><p class="hint">${String(yc.pct).replace(".", ",")}% do CDI, com CDI de ${String(yc.cdi).replace(".", ",")}% ao ano (${yc.src}). O IR segue a tabela regressiva, contado para cada valor desde que entrou (o saldo conta desde a última correção), e inclui o do que já rendeu. "Vai guardar" usa o que está programado e a sugestão de ${pct}% da sobra.</p></details>`;
@@ -1206,7 +1268,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       $("yFix2Text").textContent = `Algumas contas fixas deste mês faltam nos próximos meses (${names.slice(0, 6).join(", ")}${names.length > 6 ? "…" : ""}). Sem elas, a sobra desses meses aparece maior do que vai ser.`;
       $("yFix2Btn").textContent = `Repetir ${names.length === 1 ? "essa conta" : `essas ${names.length} contas`} até ${monthOnly(rows[11].N)}`;
     }
-    $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" inclui a parte do Renan; "Gasta" conta o valor cheio das contas e dos gastos do mês. Em "Guardei", em cima está o que você guardou de verdade (botão Guardar da Reserva) e embaixo o previsto pela sugestão de ${pct}% da sobra; o número com → embaixo da sobra é quanto fica se você guardar a sugestão. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
+    $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" inclui a parte de ${P()}; "Gasta" conta o valor cheio das contas e dos gastos do mês. Em "Guardei", em cima está o que você guardou de verdade (botão Guardar da Reserva) e embaixo o previsto pela sugestão de ${pct}% da sobra; o número com → embaixo da sobra é quanto fica se você guardar a sugestão. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
   }
   $("yFix2Btn").addEventListener("click", async () => {
     if (!store) return;
@@ -1247,14 +1309,14 @@ html.privacy .story-card .v { filter: blur(10px); }
     const cp = e.target.closest("[data-cardpay]");
     if (cp) {
       const ym = cp.dataset.cardpay;
-      save(ym, itemsOf(ym).map(i => (i.kind === "fixed" || i.kind === "var") && i.method === CARDS.renan ? { ...i, paid: true } : i));
-      toast(`Cartão do Renan de ${ddmm(lastBizDay(ym))}: pago. Também ficou marcado em Contas do dia.`);
+      save(ym, itemsOf(ym).map(i => (i.kind === "fixed" || i.kind === "var") && i.method === (partnerCard() || {}).method ? { ...i, paid: true } : i));
+      toast(`${partnerCard() ? cardLabel(partnerCard()) : "Cartão"} de ${ddmm(lastBizDay(ym))}: pago. Também ficou marcado em Contas do dia.`);
       return;
     }
     const op = e.target.closest("[data-opaid]");
     if (op) {
       const [ym, id] = op.dataset.opaid.split("|"), it = itemsOf(ym).find(i => i.id === id);
-      if (it) { save(ym, itemsOf(ym).map(i => i.id === id ? { ...i, owePaid: !i.owePaid } : i)); toast(it.owePaid ? `${it.desc}: voltou para o que você deve.` : `${it.desc}: pago ao Renan.`); }
+      if (it) { save(ym, itemsOf(ym).map(i => i.id === id ? { ...i, owePaid: !i.owePaid } : i)); toast(it.owePaid ? `${it.desc}: voltou para o que você deve.` : `${it.desc}: pago a ${P()}.`); }
       return;
     }
     const rp = e.target.closest("[data-rpaid]");
@@ -1263,7 +1325,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       if (it) {
         Promise.resolve(save(ym, itemsOf(ym).map(i => i.id === id ? { ...i, renanPaid: !i.renanPaid } : i))).then(() => {
           const quit = !it.renanPaid && renanLedger().total <= 0;
-          toast(it.renanPaid ? `${it.desc}: voltou para pendente.` : quit ? "O Renan quitou tudo! 🎉" : `${it.desc}: pago pelo Renan.`);
+          toast(it.renanPaid ? `${it.desc}: voltou para pendente.` : quit ? `${P()} quitou tudo! 🎉` : `${it.desc}: pago por ${P()}.`);
           if (quit) confetti();
         });
       }
@@ -1286,27 +1348,36 @@ html.privacy .story-card .v { filter: blur(10px); }
 
   // ---------- lançar ----------
   const form = { kind: "gasto", how: "debito", split: "0", editing: null, editDate: null };
-  const HOWS = {
-    gasto: [["debito", "Débito ou PIX"], ["itau", "Cartão Itaú"], ["mp", "Cartão Mercado Pago"], ["renan", "Cartão do Renan"]],
-    conta: [["boleto", "Boleto ou PIX"], ["itau", "Cartão Itaú"], ["mp", "Cartão Mercado Pago"], ["renan", "Cartão do Renan"]],
+  const HOWS = () => {
+    const cards = cardsList().filter(c => !c.partner || hasPartner()).map(c => [c.id, cardLabel(c)]);
+    return { gasto: [["debito", "Débito ou PIX"], ...cards], conta: [["boleto", "Boleto ou PIX"], ...cards] };
   };
-  const closingDay = (m) => (state.settings.closing && state.settings.closing[m]) || 25;
+  const closingDay = (m) => (state.settings.closing && state.settings.closing[m]) || (cardOf(m) || {}).closing || 25;
+  // em que ciclo de salário entra uma compra no cartão: pelo fechamento e, se informado, pelo vencimento
+  function cardCycle(m, d) {
+    const c = cardOf(m), close = closingDay(m);
+    const cy = d.getDate() > close ? shiftMonth(ymOf(d), 1) : ymOf(d);
+    if (!c || !c.due) return cy;
+    const [y, mo] = (c.due > close ? cy : shiftMonth(cy, 1)).split("-").map(Number);
+    return salaryMonthOf(new Date(y, mo - 1, Math.min(c.due, new Date(y, mo, 0).getDate())));
+  }
   const nextPayday = () => { const t = today0(); const p = lastBizDay(ymOf(t)); return t <= p ? p : lastBizDay(shiftMonth(ymOf(t), 1)); };
-  const howOf = (i) => /ita[uú]/i.test(i.method || "") ? "itau" : /mercado ?pago/i.test(i.method || "") ? "mp" : /renan/i.test(i.method || "") ? "renan" : i.kind === "fixed" ? "boleto" : "debito";
+  const howOf = (i) => { const c = cardOf(i.method); return c ? c.id : i.kind === "fixed" ? "boleto" : "debito"; };
   const kindOf = (i) => i.kind === "owe" ? "devo" : i.kind === "settle" ? "settle" : i.kind === "invest" ? "guardar" : i.kind === "in" && i.res ? "retirar" : i.kind === "in" ? "entrada" : i.kind === "fixed" ? "conta" : "gasto";
-  const SIMPLE = { settle: "Pagamento do Renan", guardar: "Guardar na reserva", retirar: "Retirar da reserva", devo: "O que eu devo ao Renan" };
+  const SIMPLE_BASE = { settle: 1, guardar: 1, retirar: 1, devo: 1 };
+  const simpleTitle = (k) => ({ settle: `Pagamento de ${P()}`, guardar: "Guardar na reserva", retirar: "Retirar da reserva", devo: `O que eu devo a ${P()}` })[k];
 
   function syncForm() {
-    const settle = !!SIMPLE[form.kind];
+    const settle = !!SIMPLE_BASE[form.kind];
     document.querySelector(".seg").hidden = settle; $("fDesc").closest(".field").hidden = settle && form.kind !== "devo";
     document.querySelectorAll(".seg [data-kind]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.kind === form.kind)));
-    const hows = HOWS[form.kind];
-    $("rowHow").hidden = !hows; $("rowSplit").hidden = form.kind === "entrada" || settle;
+    const hows = HOWS()[form.kind];
+    $("rowHow").hidden = !hows; $("rowSplit").hidden = form.kind === "entrada" || settle || !hasPartner();
     if (hows) {
       if (!hows.some(h => h[0] === form.how)) form.how = hows[0][0];
       $("fHow").innerHTML = hows.map(([k, t]) => `<button type="button" data-how="${k}" aria-pressed="${k === form.how}">${t}</button>`).join("");
     }
-    const onCard = hows && CARDS[form.how];
+    const onCard = hows && cardMethod(form.how);
     $("rowInst").hidden = !onCard || form.kind !== "gasto" || !!form.editing;
     $("rowRepeat").hidden = (form.kind !== "conta" && form.kind !== "entrada") || !!(form.editing && form.editing.item.inst);
     const what = form.kind === "entrada" ? "a entrada" : "a conta";
@@ -1323,8 +1394,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     const v = $("fDate").value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
     const d = new Date(v + "T00:00");
-    if (form.kind === "settle") return { ym: ymOf(d), d, text: `O Renan te pagou em ${ddmm(d)}.` };
-    if (form.kind === "devo") return { ym: ymOf(d), d, text: "Entra no saldo com o Renan. Não muda a sobra do mês." };
+    if (form.kind === "settle") return { ym: ymOf(d), d, text: `${P()} te pagou em ${ddmm(d)}.` };
+    if (form.kind === "devo") return { ym: ymOf(d), d, text: `Entra no saldo com ${P()}. Não muda a sobra do mês.` };
     if (form.kind === "guardar" || form.kind === "retirar") {
       if (form.editing && v === form.editDate) return { ym: form.editing.ym, d, text: "Continua no mesmo lugar." };
       const ym = salaryMonthOf(d), mo = monthOnly(shiftMonth(ym, 1));
@@ -1332,10 +1403,9 @@ html.privacy .story-card .v { filter: blur(10px); }
     }
     if (form.editing && v === form.editDate) return { ym: form.editing.ym, d, text: "Continua no mesmo lugar." };
     if (form.kind === "entrada") { const ym = salaryMonthOf(d); return { ym, d, text: `Entra no dinheiro de ${monthOnly(shiftMonth(ym, 1))}.` }; }
-    if (HOWS[form.kind] && CARDS[form.how]) {
-      const method = CARDS[form.how];
-      const ym = d.getDate() > closingDay(method) ? shiftMonth(ymOf(d), 1) : ymOf(d);
-      return { ym, d, text: `Vai para a ${cardName(method).replace("Fatura", "fatura").replace("Cartão", "conta do cartão")} paga em ${ddmm(lastBizDay(ym))}.` };
+    if (HOWS()[form.kind] && cardMethod(form.how)) {
+      const method = cardMethod(form.how), ym = cardCycle(method, d);
+      return { ym, d, text: `Vai para a ${cardName(method).replace("Fatura", "fatura").replace("Cartão", "conta do cartão")}, paga com o salário de ${ddmm(lastBizDay(ym))}.` };
     }
     if (form.kind === "conta") { const ym = salaryMonthOf(d); return { ym, d, text: `Você paga no dia ${ddmm(lastBizDay(ym))}, com o salário.` }; }
     const ym = shiftMonth(salaryMonthOf(d), 1);
@@ -1369,7 +1439,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       // sem data guardada, mostra o dia em que ele é pago, sem mudar o lugar
       $("fDate").value = i.day ? `${i.pm || ym}-${pad(i.day)}` : isoOf(i.kind === "var" && !isCard(i) ? new Date(+ym.slice(0, 4), +ym.slice(5) - 1, 1) : lastBizDay(isAdvance(i) ? shiftMonth(ym, -1) : ym));
       form.editDate = $("fDate").value;
-      $("fTitle").textContent = SIMPLE[kindOf(i)] || "Editar"; $("fDel").hidden = false; $("fDel").textContent = "Excluir"; delArmed = false;
+      $("fTitle").textContent = simpleTitle(kindOf(i)) || "Editar"; $("fDel").hidden = false; $("fDel").textContent = "Excluir"; delArmed = false;
       const n = seriesAfter(ym, i).length;
       // quantos meses seguidos, a partir deste, já têm esta conta ou entrada
       form.runLen = 1;
@@ -1384,7 +1454,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       $("rowScope").hidden = true; form.scope = "one";
       form.split = "0";
       $("fDate").value = isoOf(form.kind === "conta" ? nextPayday() : today0());
-      $("fTitle").textContent = SIMPLE[form.kind] || "Lançar"; $("fDel").hidden = true;
+      $("fTitle").textContent = simpleTitle(form.kind) || "Lançar"; $("fDel").hidden = true;
     }
     syncForm();
     $("sheet").showModal();
@@ -1423,7 +1493,7 @@ html.privacy .story-card .v { filter: blur(10px); }
         else { await save(ym, itemsOf(ym).filter(i => i.id !== item.id)); await save(p.ym, itemsOf(p.ym).concat(merged)); }
       } else await save(p.ym, itemsOf(p.ym).concat({ id: newId(), ...base, owePaid: false }));
       state.open.balMine = true;
-      $("sheet").close(); toast(`Anotado: você deve ${fmt(amount)} ao Renan.`); return;
+      $("sheet").close(); toast(`Anotado: você deve ${fmt(amount)} a ${P()}.`); return;
     }
     if (form.kind === "guardar" || form.kind === "retirar") {
       const amount = parseAmount($("fVal").value), p = placement();
@@ -1456,10 +1526,10 @@ html.privacy .story-card .v { filter: blur(10px); }
     if (!(amount > 0)) { $("fMsg").textContent = "Digite o valor, por exemplo 25,90."; $("fVal").focus(); return; }
     if (!p) { $("fMsg").textContent = "Escolha a data."; $("fDate").focus(); return; }
     if (!store) return;
-    const onCard = HOWS[form.kind] && CARDS[form.how];
+    const onCard = HOWS()[form.kind] && cardMethod(form.how);
     const kind = form.kind === "entrada" ? "in" : form.kind === "conta" ? "fixed" : "var";
-    const method = kind === "in" ? null : onCard ? CARDS[form.how] : kind === "fixed" ? "Boleto" : "Débito Thais";
-    const renan = kind === "in" ? 0 : form.split === "all" ? amount : form.split === "half" ? Math.round(amount / 2) : 0;
+    const method = kind === "in" ? null : onCard ? cardMethod(form.how) : kind === "fixed" ? "Boleto" : debitMethod();
+    const renan = kind === "in" || !hasPartner() ? 0 : form.split === "all" ? amount : form.split === "half" ? Math.round(amount / 2) : 0;
     const keep = form.editing && $("fDate").value === form.editDate;
     const base = { kind, desc, amount, method, renan };
     if (!keep) { base.day = p.d.getDate(); base.pm = ymOf(p.d) !== p.ym ? ymOf(p.d) : null; if (kind === "fixed") base.adv = false; }
@@ -1592,9 +1662,9 @@ html.privacy .story-card .v { filter: blur(10px); }
     let renanY = 0; for (let k = 1; k <= 12; k++) itemsOf(`${Y}-${pad(k)}`).forEach(i => { renanY += i.renan || 0; });
     const nItems = Array.from({ length: 12 }, (_, k) => itemsOf(`${Y}-${pad(k + 1)}`).length).reduce((a, b) => a + b, 0);
     cards.push({ e: "✨", k: `Seu ${Y}`, v: String(Y), t: `${nItems} lançamentos. Vamos ver como foi o seu ano?` });
-    cards.push({ e: "💰", k: "Entrou", v: fmt0(d.entra), t: "Somando salário, a parte do Renan e o resto." });
+    cards.push({ e: "💰", k: "Entrou", v: fmt0(d.entra), t: hasPartner() ? `Somando salário, a parte de ${P()} e o resto.` : "Somando salário e tudo o que entrou." });
     cards.push({ e: "🧾", k: "Você gastou", v: fmt0(d.gasta), t: top ? `A categoria campeã foi <b>${esc(top[0])}</b>, com ${fmt0(top[1])}.` : "" });
-    if (renanY) cards.push({ e: "🤝", k: "Dividido com o Renan", v: fmt0(renanY), t: "Foi a parte dele nas contas e compras do ano." });
+    if (renanY) cards.push({ e: "🤝", k: `Dividido com ${P()}`, v: fmt0(renanY), t: "Foi a parte da outra pessoa nas contas e compras do ano." });
     cards.push({ e: "🐷", k: "Você guardou", v: fmt0(d.saved), t: d.saved ? "Cada real guardado rende na caixinha. Continue assim!" : "Que tal começar a guardar um pouquinho por mês?" });
     if (best && best.sobra > 0) cards.push({ e: "🏆", k: "Seu melhor mês", v: monthOnly(best.N).replace(/^./, c => c.toUpperCase()), t: `Sobraram ${fmt0(best.sobra)}.` });
     cards.push({ e: d.sobra >= 0 ? "🎉" : "💪", k: `Sobrou em ${Y}`, v: fmt0(d.sobra), t: d.sobra >= 0 ? "Ano fechado no azul. Parabéns!" : "Ano apertado, mas agora você sabe onde ajustar.", last: true });
@@ -1656,7 +1726,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   $("settingsBtn").addEventListener("click", async () => {
     if (!store) return;
     $("recShow").hidden = true; $("backupBox").hidden = true; $("discMsg").textContent = ""; disarm = false; $("disconnect").textContent = "Desconectar este aparelho";
-    $("closingList").innerHTML = Object.values(CARDS).map((m, n) => `<label class="close-row" for="cl${n}"><span>${badge(m)}${cardName(m)}</span><span>fecha dia <input id="cl${n}" data-card-close="${esc(m)}" inputmode="numeric" maxlength="2" value="${closingDay(m)}"></span></label>`).join("");
+    $("pfSummary").textContent = profileSummary();
     $("vaultTag").innerHTML = `Este aparelho está no <b>cofre ${store.vaultTag()}</b>. Todos os seus aparelhos precisam mostrar o mesmo número para ter os mesmos dados.`;
     const acc = store.account();
     $("accName").value = acc || "";
@@ -1668,12 +1738,89 @@ html.privacy .story-card .v { filter: blur(10px); }
     catch (e) { $("qr").hidden = true; }
   });
   $("setClose").addEventListener("click", () => $("settings").close());
-  $("closingList").addEventListener("change", (e) => {
-    const inp = e.target.closest("[data-card-close]"); if (!inp || !store) return;
-    const d = parseInt(inp.value, 10);
-    if (!(d >= 1 && d <= 31)) { inp.value = closingDay(inp.dataset.cardClose); return; }
-    store.putSettings({ ...state.settings, closing: { ...(state.settings.closing || {}), [inp.dataset.cardClose]: d } });
-    toast(`${cardName(inp.dataset.cardClose)}: fecha dia ${d}.`);
+  // ---------- meu perfil (também é o assistente da primeira vez) ----------
+  const PF_COLORS = ["#ec7000", "#009ee3", "#8a05be", "#cc092f", "#00a868", "#f5b800", "#5f6a76"];
+  let pf = null, pfWelcome = false;
+  function profileSummary() {
+    const p = profile(), pd = p.payday || { type: "lastBiz" };
+    const pay = pd.type === "day" ? `salário todo dia ${pd.day}` : "salário no último dia útil";
+    const cards = cardsList().filter(c => !c.partner || p.partner).map(c => c.partner ? cardLabel(c) : c.name);
+    return `${p.name ? p.name + ": " : ""}${pay} · ${cards.length ? cards.join(", ") : "sem cartão de crédito"} · ${p.partner ? "divide com " + p.partner : "não divide gastos"}.`;
+  }
+  function openProfile(welcome) {
+    pfWelcome = !!welcome;
+    const base = welcome && !state.settings.profile ? { name: "", payday: { type: "lastBiz" }, partner: "", debit: "Débito", cards: [] } : profile();
+    pf = JSON.parse(JSON.stringify(base));
+    pf.cards.forEach(c => { c.closing = closingDay(c.method); });
+    $("pfTitle").textContent = welcome ? "Bem-vindo ao Finance" : "Meu perfil";
+    $("pfIntro").textContent = welcome ? "Conte como é a sua rotina para o app organizar as contas do seu jeito. Dá para mudar depois em ⚙ → Meu perfil." : "O app usa isso para saber quando cada conta e fatura é paga.";
+    $("pfClose").hidden = welcome;
+    $("pfName").value = pf.name || "";
+    $("pfDay").value = (pf.payday || {}).day || "";
+    $("pfPartner").value = pf.partner || "";
+    $("pfMsg").textContent = "";
+    pfSync(); $("profileDlg").showModal();
+  }
+  function pfSync() {
+    const day = (pf.payday || {}).type === "day", split = pf.partnerOn ?? !!pf.partner;
+    document.querySelectorAll("#pfPay [data-pay]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.pay === "day") === day)));
+    document.querySelectorAll("#pfSplit [data-ps]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.ps === "yes") === split)));
+    $("pfDayRow").hidden = !day; $("pfPartner").hidden = !split;
+    const d = parseInt($("pfDay").value, 10);
+    $("pfPayHint").textContent = !day ? "As faturas e contas do mês são pagas nesse dia, e o que sobra é o dinheiro do mês seguinte." : d >= 1 && d <= 31 ? (d <= 15 ? `O salário do dia ${d} paga o próprio mês (o de ${d}/11 é o dinheiro de novembro).` : `O salário do dia ${d} paga o mês seguinte (o de ${d}/10 é o dinheiro de novembro).`) : "Digite o dia em que o salário cai.";
+    const who = ($("pfPartner").value || "").trim() || "a outra pessoa";
+    $("pfCards").innerHTML = pf.cards.length ? pf.cards.map((c, n) => `<div class="pf-card" data-n="${n}">
+        <span class="bk" style="background:${esc(c.color)}">${esc(c.tag || (c.name || "?").slice(0, 2).toLowerCase())}</span>
+        <input class="lock-text" data-f="name" value="${esc(c.name)}" placeholder="Nome, ex.: Nubank" aria-label="Nome do cartão">
+        <label>fecha<input data-f="closing" inputmode="numeric" maxlength="2" value="${esc(c.closing || "")}" aria-label="Dia em que a fatura fecha"></label>
+        <label>vence<input data-f="due" inputmode="numeric" maxlength="2" value="${esc(c.due || "")}" placeholder="—" aria-label="Dia em que a fatura vence"></label>
+        <button type="button" class="pf-x" data-del aria-label="Remover cartão">×</button>
+        ${split ? `<label class="check pf-own"><input type="checkbox" data-f="partner" ${c.partner ? "checked" : ""}> é de ${esc(who)} (você manda o dinheiro e a pessoa paga)</label>` : ""}
+      </div>`).join("") : `<p class="hint">Nenhum cartão. Se você não usa cartão de crédito, pode deixar assim.</p>`;
+  }
+  $("pfPay").addEventListener("click", (e) => { const b = e.target.closest("[data-pay]"); if (!b) return; pf.payday = b.dataset.pay === "day" ? { type: "day", day: parseInt($("pfDay").value, 10) || 5 } : { type: "lastBiz" }; if (b.dataset.pay === "day" && !$("pfDay").value) $("pfDay").value = 5; pfSync(); });
+  $("pfDay").addEventListener("input", () => { pf.payday = { type: "day", day: parseInt($("pfDay").value, 10) || 0 }; pfSync(); });
+  $("pfSplit").addEventListener("click", (e) => { const b = e.target.closest("[data-ps]"); if (!b) return; pf.partnerOn = b.dataset.ps === "yes"; pfSync(); if (pf.partnerOn) $("pfPartner").focus(); });
+  $("pfPartner").addEventListener("change", pfSync);
+  $("pfAddCard").addEventListener("click", () => { pf.cards.push({ id: "", name: "", closing: "", due: "", color: PF_COLORS[pf.cards.length % PF_COLORS.length] }); pfSync(); const ins = $("pfCards").querySelectorAll('[data-f="name"]'); ins[ins.length - 1].focus(); });
+  $("pfCards").addEventListener("input", (e) => {
+    const row = e.target.closest("[data-n]"), f = e.target.dataset.f; if (!row || !f) return;
+    const c = pf.cards[+row.dataset.n];
+    c[f] = f === "partner" ? e.target.checked : f === "name" ? e.target.value : parseInt(e.target.value, 10) || "";
+    if (f === "name") { const tag = row.querySelector(".bk"); if (!c.id) { c.tag = (c.name || "?").slice(0, 2).toLowerCase(); tag.textContent = c.tag; } }
+  });
+  $("pfCards").addEventListener("change", (e) => { if (e.target.dataset.f === "partner") { pf.cards[+e.target.closest("[data-n]").dataset.n].partner = e.target.checked; } });
+  $("pfCards").addEventListener("click", (e) => { const x = e.target.closest("[data-del]"); if (!x) return; pf.cards.splice(+x.closest("[data-n]").dataset.n, 1); pfSync(); });
+  $("pfClose").addEventListener("click", () => $("profileDlg").close());
+  $("profileDlg").addEventListener("cancel", (e) => { if (pfWelcome) e.preventDefault(); });
+  $("pfOpen").addEventListener("click", () => { $("settings").close(); openProfile(false); });
+  $("pfSave").addEventListener("click", async () => {
+    if (!store) return;
+    const msg = (t) => { $("pfMsg").textContent = t; };
+    const split = pf.partnerOn ?? !!pf.partner, partner = split ? $("pfPartner").value.trim() : "";
+    if (split && !partner) return msg("Escreva o nome da pessoa com quem você divide.");
+    if ((pf.payday || {}).type === "day" && !(pf.payday.day >= 1 && pf.payday.day <= 31)) return msg("Digite o dia do salário, de 1 a 31.");
+    const used = new Set();
+    for (const c of pf.cards) {
+      c.name = (c.name || "").trim();
+      if (!c.name) return msg("Dê um nome para cada cartão, ou remova o que estiver vazio.");
+      if (!(c.closing >= 1 && c.closing <= 31)) return msg(`Digite o dia em que o ${c.name} fecha.`);
+      if (c.due !== "" && c.due != null && !(c.due >= 1 && c.due <= 31)) return msg(`O vencimento do ${c.name} precisa ser de 1 a 31.`);
+      if (!c.due) delete c.due;
+      if (!c.id) {
+        let m = `Crédito ${c.name}`, k = 2; while (cardsList().some(x => x.method === m) || used.has(m)) m = `Crédito ${c.name} ${k++}`;
+        c.id = "c" + Date.now().toString(36) + used.size; c.method = m;
+      }
+      used.add(c.method); if (!c.partner) delete c.partner;
+    }
+    const out = { name: $("pfName").value.trim(), payday: pf.payday || { type: "lastBiz" }, partner, debit: pf.debit || "Débito", cards: pf.cards };
+    // o fechamento agora mora no perfil
+    const { closing, ...rest } = state.settings;
+    await store.putSettings({ ...rest, profile: out });
+    try { localStorage.removeItem("lc:onboard"); } catch (e) {}
+    $("profileDlg").close(); state.month = null; render();
+    toast(pfWelcome ? "Tudo pronto! Toque em Lançar para começar." : "Perfil salvo.");
+    if (pfWelcome) confetti();
   });
   $("copyLink").addEventListener("click", () => navigator.clipboard.writeText(store.linkUrl()).then(() => toast("Link copiado. Abra no outro aparelho."), () => toast("Não consegui copiar. Use o QR code.")));
   $("showRec").addEventListener("click", () => { $("recShow").textContent = store.secret().match(/.{1,11}/g).join(" "); $("recShow").hidden = false; });
@@ -1710,6 +1857,8 @@ html.privacy .story-card .v { filter: blur(10px); }
   render();
   LCVault.boot({ onData, onSettings, onStatus: setSync }).then((s) => {
     store = s; render(); refreshCdi();
+    let onboard = false; try { onboard = JSON.parse(localStorage.getItem("lc:onboard")); } catch (e) {}
+    if (onboard && !state.settings.profile) openProfile(true);
     // atalhos do ícone do app: ?a=gasto | conta | entrada | guardar
     const a = new URLSearchParams(location.search).get("a");
     if (a && ["gasto", "conta", "entrada", "guardar"].includes(a)) { history.replaceState(null, "", location.pathname); form.kind = a; openForm(); }

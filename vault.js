@@ -377,6 +377,7 @@
           const pin = await choosePin("Crie seu PIN");
           await wrapSecret(s, pin);
           await recoveryScreen(s);
+          LS.set("onboard", true); // o app abre o assistente para configurar salário, cartões e divisão
           secret = s;
         } else {
           const got = await loginFlow();

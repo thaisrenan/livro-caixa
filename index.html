@@ -6,7 +6,9 @@
 <meta name="theme-color" content="#0b0d12" id="themeColor">
 <script>
   // tema escolhido (auto, claro ou escuro), aplicado antes da página aparecer
-  (function () { try { var t = JSON.parse(localStorage.getItem("lc:theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {} })();
+  (function () { try { var t = JSON.parse(localStorage.getItem("lc:theme")); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    var a = JSON.parse(localStorage.getItem("lc:accent")); if (a && a !== "roxo") document.documentElement.dataset.accent = a;
+    if (JSON.parse(localStorage.getItem("lc:privacy"))) document.documentElement.classList.add("privacy"); } catch (e) {} })();
 </script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -35,36 +37,47 @@
   /* claro */
   --paper: #f4f5f9; --sheet: #ffffff; --sheet-2: #f1f2f7; --hover: #e8eaf1;
   --ink: #12141c; --muted: #5f6678; --rule: #e2e5ec; --line: #edeff4;
-  --accent: #7c3aed; --accent-2: #0891b2; --accent-soft: #f1ebff;
+  --accent: #7c3aed; --accent-2: #0891b2; --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--sheet));
   --in: #047857; --in-soft: #e6f6ef; --out: #d92d2d; --out-soft: #fdecec; --renan: #0f766e; --renan-soft: #e6f6f3; --warn: #b7791f;
   --neutral: #c5cad5; --glass: rgba(255, 255, 255, .75); --glass-line: rgba(18, 20, 28, .08);
   --tint-violet: #f3eeff; --tint-violet-line: #e3d9fb; --tint-teal: #e8f7f3; --tint-teal-line: #c8ebe2;
-  --glow-a: rgba(124, 58, 237, .16); --glow-b: rgba(8, 145, 178, .12); --hello: #6d28d9;
+  --glow-a: color-mix(in srgb, var(--accent) 16%, transparent); --glow-b: color-mix(in srgb, var(--ring-a) 13%, transparent); --hello: var(--accent);
   --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 2px 6px rgba(16, 24, 40, .04);
   --shadow-lg: 0 18px 40px rgba(16, 24, 40, .16);
-  --lift: 0 10px 28px -12px rgba(76, 29, 149, .25);
+  --lift: 0 10px 28px -12px color-mix(in srgb, var(--accent) 25%, transparent);
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --paper: #0b0d12; --sheet: #131720; --sheet-2: #1a1f2b; --hover: #222838;
   --ink: #eef0f5; --muted: #949cae; --rule: #222838; --line: #1b202b;
-  --accent: #a78bfa; --accent-2: #22d3ee; --accent-soft: #221a3d;
+  --accent: #a78bfa; --accent-2: #22d3ee; --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--sheet));
   --in: #34d399; --in-soft: #0f2a22; --out: #ff7b7b; --out-soft: #331a1d; --renan: #5eead4; --renan-soft: #0f2a26; --warn: #f0b73a;
   --neutral: #4b5563; --glass: rgba(255, 255, 255, .06); --glass-line: rgba(255, 255, 255, .09);
   --tint-violet: #1d1838; --tint-violet-line: #2e2557; --tint-teal: #0f2a24; --tint-teal-line: #134e4a;
-  --glow-a: rgba(139, 92, 246, .28); --glow-b: rgba(34, 211, 238, .12); --hello: #a5b4fc;
+  --glow-a: color-mix(in srgb, var(--accent) 30%, transparent); --glow-b: color-mix(in srgb, var(--ring-a) 12%, transparent); --hello: color-mix(in srgb, var(--accent) 70%, #fff);
   --shadow: 0 1px 2px rgba(0, 0, 0, .35); --shadow-lg: 0 18px 40px rgba(0, 0, 0, .55); --lift: 0 12px 30px -12px rgba(0, 0, 0, .7);
   color-scheme: dark } }
 :root[data-theme="dark"] {
   --paper: #0b0d12; --sheet: #131720; --sheet-2: #1a1f2b; --hover: #222838;
   --ink: #eef0f5; --muted: #949cae; --rule: #222838; --line: #1b202b;
-  --accent: #a78bfa; --accent-2: #22d3ee; --accent-soft: #221a3d;
+  --accent: #a78bfa; --accent-2: #22d3ee; --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--sheet));
   --in: #34d399; --in-soft: #0f2a22; --out: #ff7b7b; --out-soft: #331a1d; --renan: #5eead4; --renan-soft: #0f2a26; --warn: #f0b73a;
   --neutral: #4b5563; --glass: rgba(255, 255, 255, .06); --glass-line: rgba(255, 255, 255, .09);
   --tint-violet: #1d1838; --tint-violet-line: #2e2557; --tint-teal: #0f2a24; --tint-teal-line: #134e4a;
-  --glow-a: rgba(139, 92, 246, .28); --glow-b: rgba(34, 211, 238, .12); --hello: #a5b4fc;
+  --glow-a: color-mix(in srgb, var(--accent) 30%, transparent); --glow-b: color-mix(in srgb, var(--ring-a) 12%, transparent); --hello: color-mix(in srgb, var(--accent) 70%, #fff);
   --shadow: 0 1px 2px rgba(0, 0, 0, .35); --shadow-lg: 0 18px 40px rgba(0, 0, 0, .55); --lift: 0 12px 30px -12px rgba(0, 0, 0, .7);
   color-scheme: dark }
+
+/* outras cores de destaque (escolhidas em Configurações) */
+:root[data-accent="verde"] { --accent: #047857; --accent-2: #0d9488; --grad: linear-gradient(135deg, #10b981, #0d9488); --ring-a: #a3e635; --ring-b: #10b981; }
+:root[data-accent="rosa"] { --accent: #be185d; --accent-2: #9333ea; --grad: linear-gradient(135deg, #ec4899, #a855f7); --ring-a: #fda4af; --ring-b: #ec4899; }
+:root[data-accent="azul"] { --accent: #1d4ed8; --accent-2: #0891b2; --grad: linear-gradient(135deg, #3b82f6, #4f46e5); --ring-a: #22d3ee; --ring-b: #3b82f6; }
+:root[data-accent="laranja"] { --accent: #c2410c; --accent-2: #b45309; --grad: linear-gradient(135deg, #f97316, #e11d48); --ring-a: #facc15; --ring-b: #f97316; }
+@media (prefers-color-scheme: dark) {
+  :root[data-accent="verde"]:not([data-theme="light"]) { --accent: #34d399; } :root[data-accent="rosa"]:not([data-theme="light"]) { --accent: #f472b6; }
+  :root[data-accent="azul"]:not([data-theme="light"]) { --accent: #60a5fa; } :root[data-accent="laranja"]:not([data-theme="light"]) { --accent: #fb923c; } }
+:root[data-theme="dark"][data-accent="verde"] { --accent: #34d399; } :root[data-theme="dark"][data-accent="rosa"] { --accent: #f472b6; }
+:root[data-theme="dark"][data-accent="azul"] { --accent: #60a5fa; } :root[data-theme="dark"][data-accent="laranja"] { --accent: #fb923c; }
 
 /* base */
 * { box-sizing: border-box; }
@@ -90,9 +103,10 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 /* cabeçalho */
 .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .month { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.top h1 { font-size: var(--fs-xl); font-weight: 700; letter-spacing: -0.02em; min-width: 7.2ch; text-align: center; white-space: nowrap; }
-.top h1 .yr { font-family: var(--font-body); font-weight: 600; font-size: var(--fs-md); color: var(--muted); letter-spacing: 0; margin-left: 2px; }
-.top-actions { display: flex; gap: 8px; }
+.top h1 { font-size: clamp(1.3rem, 6.4vw, var(--fs-xl)); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; text-align: center; white-space: nowrap; min-width: 0; }
+.top h1 .yr { display: block; font-family: var(--font-body); font-weight: 600; font-size: var(--fs-xs); color: var(--muted); letter-spacing: 0.12em; line-height: 1; margin-top: 1px; }
+.top-actions { display: flex; gap: 6px; flex: none; }
+@media (max-width: 380px) { .top-actions .iconbtn, .navbtn { width: 36px; height: 36px; } }
 .navbtn, .iconbtn { width: 40px; height: 40px; border-radius: 12px; border: 0; background: transparent; color: var(--muted); display: grid; place-items: center; flex: none; transition: background .15s, color .15s, transform .15s; }
 .navbtn:hover, .iconbtn:hover { background: var(--sheet); color: var(--ink); box-shadow: var(--shadow); }
 .navbtn:active, .iconbtn:active { transform: scale(.92); }
@@ -239,7 +253,7 @@ details.how p, details.how small { display: block; margin: 4px 0 0; }
 .ychips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 1px 4px; scrollbar-width: none; }
 .ychips button { flex: none; border: 1px solid var(--rule); background: var(--sheet); color: var(--muted); border-radius: 999px; padding: 8px 16px; font-weight: 600; font-size: var(--fs-md); transition: transform .15s; }
 .ychips button:active { transform: scale(.95); }
-.ychips button[aria-pressed="true"] { background: var(--grad); border-color: transparent; color: #fff; box-shadow: 0 6px 16px -6px rgba(124, 58, 237, .6); }
+.ychips button[aria-pressed="true"] { background: var(--grad); border-color: transparent; color: #fff; box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--accent) 60%, transparent); }
 .ychart { padding: 14px 0 8px; }
 .ychart svg { width: 100%; height: auto; display: block; }
 .ychart text { fill: var(--muted); font-size: 10px; font-family: var(--font-body); }
@@ -264,16 +278,16 @@ details.how p, details.how small { display: block; margin: 4px 0 0; }
 .btn:hover { background: var(--hover); }
 .btn:active { transform: scale(.97); }
 .btn:disabled { opacity: .5; cursor: default; }
-.btn.primary { background: var(--grad); border-color: transparent; color: #fff; box-shadow: 0 6px 16px -8px rgba(124, 58, 237, .7); }
+.btn.primary { background: var(--grad); border-color: transparent; color: #fff; box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--accent) 70%, transparent); }
 .btn.primary:hover { filter: brightness(1.08); }
 .btn.danger { color: var(--out); border-color: color-mix(in srgb, var(--out) 40%, var(--rule)); }
 .btn.small { padding: 7px 12px; font-size: var(--fs-sm); }
 
 /* botão lançar, com um brilho que passa */
-.fab { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); border: 0; border-radius: 999px; background: var(--grad); color: #fff; font-weight: 600; font-size: var(--fs-base); padding: 14px 26px 14px 20px; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 24px rgba(124, 58, 237, .4), 0 2px 4px rgba(16, 24, 40, .12); z-index: 20; transition: transform .2s var(--ease), box-shadow .2s; overflow: hidden; }
+.fab { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); border: 0; border-radius: 999px; background: var(--grad); color: #fff; font-weight: 600; font-size: var(--fs-base); padding: 14px 26px 14px 20px; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 40%, transparent), 0 2px 4px rgba(16, 24, 40, .12); z-index: 20; transition: transform .2s var(--ease), box-shadow .2s; overflow: hidden; }
 .fab::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%); transform: translateX(-120%); animation: sheen 5s ease-in-out 1.5s infinite; }
 @keyframes sheen { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
-.fab:hover { transform: translateX(-50%) translateY(-2px); box-shadow: 0 14px 30px rgba(124, 58, 237, .5); }
+.fab:hover { transform: translateX(-50%) translateY(-2px); box-shadow: 0 14px 30px color-mix(in srgb, var(--accent) 50%, transparent); }
 .fab:active { transform: translateX(-50%) scale(.96); }
 html.locked .fab, html.locked .wrap { visibility: hidden; }
 
@@ -329,7 +343,7 @@ input[type=file] { display: none; }
   padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 html.locked body { overflow: hidden; }
 .lock-body { width: min(380px, 100%); display: grid; gap: 14px; justify-items: center; text-align: center; animation: up .4s var(--ease); }
-.lock-icon { width: 76px; height: 76px; border-radius: 22px; box-shadow: 0 14px 34px -8px rgba(124, 58, 237, .6); margin-bottom: 8px; animation: float 6s ease-in-out infinite; }
+.lock-icon { width: 76px; height: 76px; border-radius: 22px; box-shadow: 0 14px 34px -8px color-mix(in srgb, var(--accent) 60%, transparent); margin-bottom: 8px; animation: float 6s ease-in-out infinite; }
 @keyframes float { 50% { transform: translateY(-4px); } }
 .lock-hello { margin: 0 0 -10px; font-size: var(--fs-sm); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hello); }
 .lock-title { font-size: 1.5rem; letter-spacing: -0.02em; }
@@ -365,7 +379,8 @@ html.locked body { overflow: hidden; }
   .tabs { max-width: 420px; }
   .stack { display: block; columns: 2; column-gap: 18px; }
   .stack > * { break-inside: avoid; margin-bottom: 18px; }
-  .stack > .hero, .stack > .ychips { column-span: all; }
+  .stack > .hero, .stack > .ychips, .stack > .story-open { column-span: all; }
+  .story-open { justify-self: start; }
   .ringhero { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "ring stats" "ring sub"; align-items: center; justify-items: stretch; column-gap: 36px; text-align: left; padding: 22px 26px; background: var(--sheet); border: 1px solid var(--rule); box-shadow: var(--shadow); border-radius: 22px; }
   .ringhero .ring { grid-area: ring; width: 230px; }
   .ringhero .hero-stats { grid-area: stats; margin-top: 0; align-self: end; }
@@ -378,6 +393,32 @@ html.locked body { overflow: hidden; }
   dialog.sheet { margin: auto; border-radius: 22px; border-bottom: 1px solid var(--rule); max-height: 90%; }
   .toast { bottom: 32px; }
 }
+/* valores escondidos: os números ficam borrados até tocar no olho de novo */
+html.privacy :is(.num, .val, .big, .owed, .tot, .hero-stats b, .ytable td:not(.mname), .ytiles b, .ytiles small, .fv-leg strong, .cat-top .num, .ychart text, .where b) { filter: blur(7px); transition: filter .25s; user-select: none; }
+html.privacy .ychart rect title { display: none; }
+.swatches { display: flex; gap: 10px; margin-top: 4px; }
+.swatches button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--sw); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .25); transition: transform .15s; }
+.swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink); transform: scale(1.06); }
+/* confete */
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 120; }
+/* retrospectiva do ano, em telas que passam como stories */
+.story { position: fixed; inset: 0; z-index: 110; display: grid; place-items: center; background: radial-gradient(90% 60% at 80% 0%, color-mix(in srgb, var(--accent) 45%, transparent), transparent 70%), radial-gradient(80% 50% at 0% 100%, color-mix(in srgb, var(--ring-a) 25%, transparent), transparent 70%), #0b0d12; color: #fff; animation: fade .25s ease-out; }
+.story-bars { position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); left: 16px; right: 16px; display: flex; gap: 4px; }
+.story-bars i { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .25); overflow: hidden; }
+.story-bars i b { display: block; height: 100%; width: 0; background: #fff; }
+.story-bars i.done b { width: 100%; }
+.story-bars i.now b { animation: storybar 5s linear forwards; }
+@keyframes storybar { to { width: 100%; } }
+.story-close { position: absolute; top: calc(26px + env(safe-area-inset-top, 0px)); right: 12px; border: 0; background: none; color: #fff; font-size: 1.6rem; padding: 6px 10px; opacity: .8; }
+.story-card { pointer-events: none; width: min(420px, 100%); padding: 0 28px; text-align: center; display: grid; gap: 10px; animation: up .5s var(--ease); }
+.story-card .k { font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .14em; opacity: .75; font-weight: 600; }
+.story-card .v { font-family: var(--font-display); font-size: clamp(2.6rem, 13vw, 3.6rem); font-weight: 700; letter-spacing: -.03em; line-height: 1.05; background: linear-gradient(135deg, #fff, color-mix(in srgb, var(--ring-a) 60%, #fff)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.story-card .t { font-size: var(--fs-base); opacity: .85; line-height: 1.5; }
+.story-card .e { font-size: 3rem; }
+.story-nav { position: absolute; inset: 60px 0 0; display: grid; grid-template-columns: 1fr 2fr; }
+.story-nav button { border: 0; background: none; }
+.story-share { position: absolute; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 2; }
+html.privacy .story-card .v { filter: blur(10px); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -393,6 +434,7 @@ html.locked body { overflow: hidden; }
       <button class="navbtn" id="next" type="button" aria-label="Próximo mês"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
     </div>
     <div class="top-actions">
+    <button class="iconbtn" id="eyeBtn" type="button" aria-label="Esconder valores" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path id="eyeIcon" d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></button>
     <button class="iconbtn" id="themeBtn" type="button" aria-label="Trocar tema claro ou escuro"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path id="themeIcon" d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
     <button class="iconbtn" id="settingsBtn" type="button" aria-label="Configurações"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
     </div>
@@ -444,6 +486,7 @@ html.locked body { overflow: hidden; }
 
   <div id="viewArch" class="stack" hidden>
     <div class="ychips" id="aYears" role="group" aria-label="Escolha o ano"></div>
+    <button class="btn primary story-open" id="storyBtn" type="button">✨ Ver a retrospectiva do ano</button>
     <section class="hero" aria-labelledby="aLbl">
       <span class="lbl" id="aLbl">Sobrou no ano</span>
       <span class="big num" id="aLeft">—</span>
@@ -471,7 +514,7 @@ html.locked body { overflow: hidden; }
 
   <section class="hero ringhero" id="hero" aria-live="polite">
     <div class="ring" title="Quanto do dinheiro do mês já foi usado">
-      <svg viewBox="0 0 220 220" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs>
+      <svg viewBox="0 0 220 220" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" style="stop-color:var(--ring-a)"/><stop offset="1" style="stop-color:var(--ring-b)"/></linearGradient></defs>
         <circle cx="110" cy="110" r="96" class="ring-track"/><circle cx="110" cy="110" r="96" class="ring-bar" id="heroRing" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg>
       <div class="ring-in"><span class="lbl" id="heroLbl">Sobra para o mês</span><span class="big num" id="heroVal">—</span><span class="ring-pct" id="heroPct"></span></div>
     </div>
@@ -592,6 +635,13 @@ html.locked body { overflow: hidden; }
     <section class="set-sec"><h3>Aparência</h3>
       <div class="seg" id="themeSeg" role="group" aria-label="Tema"><button type="button" data-th="auto">Automático</button><button type="button" data-th="light">Claro</button><button type="button" data-th="dark">Escuro</button></div>
       <p class="hint">Automático segue o tema do celular.</p>
+      <div class="swatches" id="accentSeg" role="group" aria-label="Cor de destaque">
+        <button type="button" data-ac="roxo" style="--sw:linear-gradient(135deg,#8b5cf6,#6366f1)" aria-label="Roxo"></button>
+        <button type="button" data-ac="verde" style="--sw:linear-gradient(135deg,#10b981,#0d9488)" aria-label="Verde"></button>
+        <button type="button" data-ac="rosa" style="--sw:linear-gradient(135deg,#ec4899,#a855f7)" aria-label="Rosa"></button>
+        <button type="button" data-ac="azul" style="--sw:linear-gradient(135deg,#3b82f6,#4f46e5)" aria-label="Azul"></button>
+        <button type="button" data-ac="laranja" style="--sw:linear-gradient(135deg,#f97316,#e11d48)" aria-label="Laranja"></button>
+      </div>
     </section>
     <section class="set-sec">
       <h3>Conectar outro aparelho</h3>
@@ -1033,7 +1083,7 @@ html.locked body { overflow: hidden; }
       g += bar(r.gasta, p ? x0 + bw + 2 : x0, "url(#aGrad)", Y);
       g += `<text x="${(k * cw + cw / 2).toFixed(1)}" y="${H - 6}" text-anchor="middle">${monthOnly(r.N).slice(0, 3)}</text>`;
     });
-    $("aChart").innerHTML = g.replace("<line", `<defs><linearGradient id="aGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs><line`) + `</svg>`;
+    $("aChart").innerHTML = g.replace("<line", `<defs><linearGradient id="aGrad" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:var(--ring-b)"/><stop offset="1" style="stop-color:var(--ring-a)"/></linearGradient></defs><line`) + `</svg>`;
     $("aLegend").innerHTML = p ? `<b class="dot" style="background:var(--neutral)"></b> ${Y - 1} &nbsp;<b class="dot" style="background:var(--accent)"></b> ${Y}` : "";
     // categorias do ano, com a variação em relação ao ano anterior
     const cats = Object.entries(d.cats).filter(([, x]) => x > 0).sort((a, b) => b[1] - a[1]).slice(0, 8), cmax = cats.length ? cats[0][1] : 1;
@@ -1210,7 +1260,13 @@ html.locked body { overflow: hidden; }
     const rp = e.target.closest("[data-rpaid]");
     if (rp) {
       const [ym, id] = rp.dataset.rpaid.split("|"), it = itemsOf(ym).find(i => i.id === id);
-      if (it) { save(ym, itemsOf(ym).map(i => i.id === id ? { ...i, renanPaid: !i.renanPaid } : i)); toast(it.renanPaid ? `${it.desc}: voltou para pendente.` : `${it.desc}: pago pelo Renan.`); }
+      if (it) {
+        Promise.resolve(save(ym, itemsOf(ym).map(i => i.id === id ? { ...i, renanPaid: !i.renanPaid } : i))).then(() => {
+          const quit = !it.renanPaid && renanLedger().total <= 0;
+          toast(it.renanPaid ? `${it.desc}: voltou para pendente.` : quit ? "O Renan quitou tudo! 🎉" : `${it.desc}: pago pelo Renan.`);
+          if (quit) confetti();
+        });
+      }
       return;
     }
     const card = e.target.closest("[data-card]"), paid = e.target.closest("[data-paid]"), tog = e.target.closest("[data-toggle]"), ed = e.target.closest("[data-edit]");
@@ -1383,7 +1439,8 @@ html.locked body { overflow: hidden; }
         else { await save(ym, itemsOf(ym).filter(i => i.id !== item.id)); await save(p.ym, itemsOf(p.ym).concat(merged)); }
       } else await save(p.ym, itemsOf(p.ym).concat({ id: newId(), ...base, inst: null }));
       $("sheet").close();
-      toast(form.kind === "guardar" ? `Guardado: ${fmt(amount)}.` : `Retirado da reserva: ${fmt(amount)}.`);
+      toast(form.kind === "guardar" ? `Guardado: ${fmt(amount)}. 🎉` : `Retirado da reserva: ${fmt(amount)}.`);
+      if (form.kind === "guardar" && !form.editing) confetti();
       return;
     }
     if (form.kind === "settle") {
@@ -1489,6 +1546,90 @@ html.locked body { overflow: hidden; }
   mqDark.addEventListener("change", () => applyTheme());
   applyTheme();
 
+  // ---------- cor de destaque e valores escondidos ----------
+  const lsGet = (k, d) => { try { const v = JSON.parse(localStorage.getItem("lc:" + k)); return v == null ? d : v; } catch (e) { return d; } };
+  const lsSet = (k, v) => { try { localStorage.setItem("lc:" + k, JSON.stringify(v)); } catch (e) {} };
+  function applyAccent(a) {
+    if (a) lsSet("accent", a);
+    const cur = lsGet("accent", "roxo");
+    if (cur === "roxo") delete document.documentElement.dataset.accent; else document.documentElement.dataset.accent = cur;
+    document.querySelectorAll("#accentSeg [data-ac]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ac === cur)));
+  }
+  $("accentSeg").addEventListener("click", (e) => { const b = e.target.closest("[data-ac]"); if (b) applyAccent(b.dataset.ac); });
+  applyAccent();
+  function applyPrivacy(on) {
+    if (on != null) lsSet("privacy", on);
+    const v = !!lsGet("privacy", false);
+    document.documentElement.classList.toggle("privacy", v);
+    $("eyeBtn").setAttribute("aria-pressed", String(v)); $("eyeBtn").setAttribute("aria-label", v ? "Mostrar valores" : "Esconder valores");
+    $("eyeIcon").setAttribute("d", v ? "M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2" : "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z");
+  }
+  $("eyeBtn").addEventListener("click", () => applyPrivacy(!lsGet("privacy", false)));
+  applyPrivacy();
+
+  // ---------- confete ----------
+  function confetti() {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const c = document.createElement("canvas"), dpr = Math.min(2, window.devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+    c.className = "confetti"; c.width = W * dpr; c.height = H * dpr; document.body.appendChild(c);
+    const g = c.getContext("2d"); g.scale(dpr, dpr);
+    const css = getComputedStyle(document.documentElement), cols = [css.getPropertyValue("--ring-a"), css.getPropertyValue("--ring-b"), css.getPropertyValue("--accent"), "#fbbf24", "#f472b6", "#34d399"].map(x => x.trim());
+    const ps = Array.from({ length: 140 }, () => ({ x: W / 2 + (Math.random() - .5) * 80, y: H * .62, vx: (Math.random() - .5) * 13, vy: -(Math.random() * 13 + 7), r: Math.random() * 6 + 4, a: Math.random() * 6, va: (Math.random() - .5) * .35, c: cols[Math.random() * cols.length | 0], s: Math.random() < .5 }));
+    const t0 = performance.now();
+    (function frame(t) {
+      const k = (t - t0) / 2200; g.clearRect(0, 0, W, H);
+      ps.forEach(p => { p.vy += .32; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.va;
+        g.save(); g.globalAlpha = Math.max(0, 1 - k * k); g.translate(p.x, p.y); g.rotate(p.a); g.fillStyle = p.c;
+        if (p.s) g.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); else { g.beginPath(); g.arc(0, 0, p.r / 2.6, 0, 7); g.fill(); } g.restore(); });
+      if (k < 1) requestAnimationFrame(frame); else c.remove();
+    })(t0);
+  }
+
+  // ---------- retrospectiva do ano ----------
+  function storyCards(Y) {
+    const d = yearData(Y), rows = d.rows.filter(r => r.entra || r.gasta), cards = [];
+    const best = rows.slice().sort((a, b) => b.sobra - a.sobra)[0], top = Object.entries(d.cats).sort((a, b) => b[1] - a[1])[0];
+    let renanY = 0; for (let k = 1; k <= 12; k++) itemsOf(`${Y}-${pad(k)}`).forEach(i => { renanY += i.renan || 0; });
+    const nItems = Array.from({ length: 12 }, (_, k) => itemsOf(`${Y}-${pad(k + 1)}`).length).reduce((a, b) => a + b, 0);
+    cards.push({ e: "✨", k: `Seu ${Y}`, v: String(Y), t: `${nItems} lançamentos. Vamos ver como foi o seu ano?` });
+    cards.push({ e: "💰", k: "Entrou", v: fmt0(d.entra), t: "Somando salário, a parte do Renan e o resto." });
+    cards.push({ e: "🧾", k: "Você gastou", v: fmt0(d.gasta), t: top ? `A categoria campeã foi <b>${esc(top[0])}</b>, com ${fmt0(top[1])}.` : "" });
+    if (renanY) cards.push({ e: "🤝", k: "Dividido com o Renan", v: fmt0(renanY), t: "Foi a parte dele nas contas e compras do ano." });
+    cards.push({ e: "🐷", k: "Você guardou", v: fmt0(d.saved), t: d.saved ? "Cada real guardado rende na caixinha. Continue assim!" : "Que tal começar a guardar um pouquinho por mês?" });
+    if (best && best.sobra > 0) cards.push({ e: "🏆", k: "Seu melhor mês", v: monthOnly(best.N).replace(/^./, c => c.toUpperCase()), t: `Sobraram ${fmt0(best.sobra)}.` });
+    cards.push({ e: d.sobra >= 0 ? "🎉" : "💪", k: `Sobrou em ${Y}`, v: fmt0(d.sobra), t: d.sobra >= 0 ? "Ano fechado no azul. Parabéns!" : "Ano apertado, mas agora você sabe onde ajustar.", last: true });
+    return cards;
+  }
+  function openStory(Y) {
+    const cards = storyCards(Y); let k = 0, timer;
+    const el = document.createElement("div"); el.className = "story"; el.setAttribute("role", "dialog"); el.setAttribute("aria-label", `Retrospectiva de ${Y}`);
+    document.body.appendChild(el);
+    const close = () => { clearTimeout(timer); el.remove(); document.removeEventListener("keydown", onKey); };
+    const show = (n) => {
+      if (n >= cards.length) return close();
+      k = Math.max(0, n); const c = cards[k]; clearTimeout(timer);
+      el.innerHTML = `<div class="story-bars">${cards.map((_, i) => `<i class="${i < k ? "done" : i === k ? "now" : ""}"><b></b></i>`).join("")}</div>
+        <div class="story-nav"><button type="button" aria-label="Anterior" data-sn="-1"></button><button type="button" aria-label="Próxima" data-sn="1"></button></div>
+        <button class="story-close" type="button" aria-label="Fechar">✕</button>
+        <div class="story-card"><div class="e">${c.e}</div><div class="k">${esc(c.k)}</div><div class="v num">${esc(c.v)}</div><div class="t">${c.t}</div></div>
+        ${c.last ? `<button class="btn primary story-share" type="button">Compartilhar resumo</button>` : ""}`;
+      if (c.last) { confetti(); } else timer = setTimeout(() => show(k + 1), 5000);
+    };
+    el.addEventListener("click", (e) => {
+      if (e.target.closest(".story-close")) return close();
+      if (e.target.closest(".story-share")) {
+        const d = yearData(Y), text = `Meu ${Y} no Finance: entrou ${fmt0(d.entra)}, gastei ${fmt0(d.gasta)}, guardei ${fmt0(d.saved)} e sobrou ${fmt0(d.sobra)}.`;
+        if (navigator.share) navigator.share({ text }).catch(() => {}); else navigator.clipboard.writeText(text).then(() => toast("Resumo copiado."), () => {});
+        return;
+      }
+      const b = e.target.closest("[data-sn]"); if (b) show(k + +b.dataset.sn);
+    });
+    const onKey = (e) => { if (e.key === "Escape") close(); if (e.key === "ArrowRight") show(k + 1); if (e.key === "ArrowLeft") show(k - 1); };
+    document.addEventListener("keydown", onKey);
+    show(0);
+  }
+  $("storyBtn").addEventListener("click", () => openStory(state.archYear));
+
   // números grandes contam até o valor novo
   function countTo(el, cents, format = fmt) {
     const from = el._v, reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1567,7 +1708,12 @@ html.locked body { overflow: hidden; }
   const onData = (months) => { state.months = months; render(); };
   const onSettings = (s) => { state.settings = s || {}; render(); };
   render();
-  LCVault.boot({ onData, onSettings, onStatus: setSync }).then((s) => { store = s; render(); refreshCdi(); });
+  LCVault.boot({ onData, onSettings, onStatus: setSync }).then((s) => {
+    store = s; render(); refreshCdi();
+    // atalhos do ícone do app: ?a=gasto | conta | entrada | guardar
+    const a = new URLSearchParams(location.search).get("a");
+    if (a && ["gasto", "conta", "entrada", "guardar"].includes(a)) { history.replaceState(null, "", location.pathname); form.kind = a; openForm(); }
+  });
 })();
 </script>
 <script>

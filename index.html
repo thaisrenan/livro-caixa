@@ -85,9 +85,8 @@
 html, body { margin: 0; }
 body { background: radial-gradient(70% 40% at 90% -5%, var(--glow-a), transparent 70%), radial-gradient(60% 35% at -10% 0%, var(--glow-b), transparent 70%), var(--paper);
   background-attachment: fixed; color: var(--ink); font-family: var(--font-body); font-size: var(--fs-base); line-height: 1.45; -webkit-font-smoothing: antialiased;
-  padding: calc(14px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(120px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  padding: calc(14px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(110px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
   transition: background-color .35s, color .35s; min-height: 100vh; }
-body::after { content: ""; position: fixed; left: 0; right: 0; bottom: 0; height: calc(100px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--paper) 45%, transparent); pointer-events: none; z-index: 15; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -119,10 +118,6 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .sync.pending::before, .sync.syncing::before { background: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
 .sync.offline::before, .sync.error::before { background: var(--out); }
 @keyframes pulse { 50% { opacity: .35; } }
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--sheet); border: 1px solid var(--rule); border-radius: 13px; padding: 3px; gap: 3px; box-shadow: var(--shadow); }
-.tabs button { border: 0; background: transparent; padding: 8px; border-radius: 10px; font-weight: 600; font-size: var(--fs-md); color: var(--muted); transition: background .2s, color .2s, box-shadow .2s; }
-.tabs button:hover { color: var(--ink); }
-.tabs button[aria-selected="true"] { background: var(--sheet-2); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rule), 0 1px 2px rgba(0, 0, 0, .06); }
 
 /* cartões que entram com um leve deslize */
 .stack > * { animation: up .5s var(--ease) both; }
@@ -283,13 +278,86 @@ details.how p, details.how small { display: block; margin: 4px 0 0; }
 .btn.danger { color: var(--out); border-color: color-mix(in srgb, var(--out) 40%, var(--rule)); }
 .btn.small { padding: 7px 12px; font-size: var(--fs-sm); }
 
-/* botão lançar, com um brilho que passa */
-.fab { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); border: 0; border-radius: 999px; background: var(--grad); color: #fff; font-weight: 600; font-size: var(--fs-base); padding: 14px 26px 14px 20px; display: flex; align-items: center; gap: 8px; box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 40%, transparent), 0 2px 4px rgba(16, 24, 40, .12); z-index: 20; transition: transform .2s var(--ease), box-shadow .2s; overflow: hidden; }
+html.locked .tabbar, html.locked .wrap { visibility: hidden; }
+
+/* barra de abas embaixo, como app nativo, com o + no meio */
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr); align-items: start;
+  padding: 8px max(8px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+  background: color-mix(in srgb, var(--sheet) 82%, transparent); -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); border-top: 1px solid var(--rule); }
+.tabbar [role="tab"] { border: 0; background: none; display: grid; justify-items: center; gap: 3px; padding: 4px 0; font-size: 0.6875rem; font-weight: 600; color: var(--muted); transition: color .2s, transform .15s; min-width: 0; }
+.tabbar [role="tab"] span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabbar [role="tab"] svg.i { width: 23px; height: 23px; transition: transform .3s var(--ease); }
+.tabbar [role="tab"][aria-selected="true"] { color: var(--accent); }
+.tabbar [role="tab"][aria-selected="true"] svg.i { transform: translateY(-2px) scale(1.08); }
+.tabbar [role="tab"]:active { transform: scale(.92); }
+.fab { justify-self: center; margin-top: -26px; width: 58px; height: 58px; border: 0; border-radius: 20px; background: var(--grad); color: #fff; display: grid; place-items: center; position: relative; overflow: hidden;
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 45%, transparent), 0 0 0 5px var(--paper); transition: transform .2s var(--ease); }
+.fab svg.i { width: 28px; height: 28px; stroke-width: 2.4; }
 .fab::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%); transform: translateX(-120%); animation: sheen 5s ease-in-out 1.5s infinite; }
 @keyframes sheen { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
-.fab:hover { transform: translateX(-50%) translateY(-2px); box-shadow: 0 14px 30px color-mix(in srgb, var(--accent) 50%, transparent); }
-.fab:active { transform: translateX(-50%) scale(.96); }
-html.locked .fab, html.locked .wrap { visibility: hidden; }
+.fab:active { transform: scale(.92) rotate(90deg); }
+
+/* mosaico da aba Mês */
+.bento { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bento > * { animation: up .5s var(--ease) both; }
+.bento > :nth-child(2) { animation-delay: .04s; } .bento > :nth-child(3) { animation-delay: .08s; } .bento > :nth-child(4) { animation-delay: .12s; }
+.bento > :nth-child(5) { animation-delay: .16s; } .bento > :nth-child(6) { animation-delay: .2s; } .bento > :nth-child(n+7) { animation-delay: .24s; }
+.tile { position: relative; text-align: left; display: grid; align-content: start; gap: 2px; min-width: 0; padding: 14px; border-radius: 20px; background: var(--sheet); border: 1px solid var(--rule); box-shadow: var(--shadow); color: var(--ink); font: inherit; overflow: hidden; transition: transform .2s var(--ease), box-shadow .2s; }
+button.tile { cursor: pointer; }
+button.tile:active { transform: scale(.97); }
+.tile.w2 { grid-column: span 2; }
+.tk { font-size: var(--fs-xs); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.tv { font-family: var(--font-display); font-size: 1.45rem; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile small { font-size: var(--fs-xs); color: var(--muted); }
+.tmore { position: absolute; top: 14px; right: 14px; font-size: var(--fs-xs); color: var(--muted); }
+button.tile:not(.w2)::after { content: "›"; position: absolute; top: 10px; right: 13px; color: var(--muted); font-size: 1.1rem; }
+.spark { width: 100%; height: 28px; margin-top: 6px; overflow: visible; }
+.tprog { display: block; height: 7px; border-radius: 99px; background: var(--sheet-2); overflow: hidden; margin-top: 9px; }
+.tprog i { display: block; height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--ring-a), var(--ring-b)); transition: width .9s var(--ease); }
+.tbars { display: flex; align-items: flex-end; justify-content: flex-end; gap: 4px; height: 40px; margin-top: 8px; }
+.tbars i { flex: 1; max-width: 18px; min-height: 3px; border-radius: 4px 4px 2px 2px; background: linear-gradient(var(--ring-b), var(--ring-a)); transform-origin: bottom; animation: rise-bar .7s var(--ease) both; }
+#tPartnerBars i { background: linear-gradient(var(--renan), color-mix(in srgb, var(--renan) 50%, transparent)); }
+.tile.trow { grid-template-columns: auto minmax(0, 1fr); align-items: end; gap: 16px; }
+.tile.trow > span:first-child { display: grid; gap: 2px; }
+.tbars.wide { height: 48px; margin: 0; }
+.tcats { display: flex; gap: 14px; align-items: center; margin-top: 8px; }
+.tcats svg { width: 76px; height: 76px; flex: none; transform: rotate(-90deg); }
+.tcats svg circle { animation: dash 1s var(--ease) both; }
+@keyframes dash { from { stroke-dasharray: 0 100; } }
+.tchips { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.tchips span { font-size: var(--fs-xs); padding: 4px 9px 4px 7px; border-radius: 99px; background: var(--sheet-2); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+/* sobra em formato de bloco: anel pequeno ao lado do valor */
+.ringhero.tile { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "ring txt"; align-items: center; justify-items: start; column-gap: 16px; text-align: left; padding: 16px;
+  background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 65%), var(--sheet); border: 1px solid var(--tint-violet-line); box-shadow: var(--shadow); border-radius: 22px; }
+.ringhero.tile .ring { grid-area: ring; width: 104px; }
+.ringhero.tile .ring circle { stroke-width: 18; }
+.ringhero.tile .ring-in { inset: 0; }
+.ringhero.tile .ring-in .lbl, .ringhero.tile .ring-in .big { display: none; }
+.ringhero.tile .ring-pct { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: var(--ink); text-align: center; line-height: 1; display: grid; }
+.ringhero.tile .ring-pct small { font-family: var(--font-body); font-size: 0.625rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-top: 3px; }
+.ringhero.tile .txt { grid-area: txt; display: grid; gap: 2px; min-width: 0; }
+.ringhero.tile .txt .big { display: block; font-size: clamp(1.7rem, 8vw, 2.2rem); }
+.ringhero.tile .sub { margin: 0; font-size: var(--fs-sm); }
+.ringhero.tile .hero-stats { display: none; }
+.swipe-hint { text-align: center; font-size: var(--fs-xs); margin: 14px 0 0; opacity: .7; }
+#viewMonth.go-next .bento { animation: from-right .35s var(--ease); } #viewMonth.go-prev .bento { animation: from-left .35s var(--ease); }
+@keyframes from-right { from { transform: translateX(40px); opacity: 0; } } @keyframes from-left { from { transform: translateX(-40px); opacity: 0; } }
+
+/* folha que sobe com a lista completa */
+dialog.detail { max-height: 88%; }
+dialog.detail .sheet-head { margin-bottom: -6px; }
+#detailBody > section { border: 0; box-shadow: none; background: none; padding: 0; transform: none !important; }
+#detailBody .block-head { padding-top: 0; }
+#detailBody .block-head h2 { font-family: var(--font-display); font-size: var(--fs-lg); letter-spacing: -.01em; text-transform: none; color: var(--ink); }
+#detailBody { overflow-x: hidden; }
+#detailBody .line { position: relative; background: var(--sheet); touch-action: pan-y; }
+#detailBody .line.swiping { transition: none; }
+#detailBody .line.back { transition: transform .25s var(--ease); }
+#detailBody .line::after { content: attr(data-swipe); position: absolute; top: 0; bottom: 0; left: 100%; width: 120px; display: flex; align-items: center; padding-left: 16px; font-weight: 700; font-size: var(--fs-sm); color: #fff; background: var(--in); opacity: 0; }
+#detailBody .line.swiping::after { opacity: 1; }
+#detailBody .line[data-swipe^="🗑"]::after { background: var(--out); }
+.toast button { border: 0; background: none; color: var(--accent); font-weight: 700; margin-left: 12px; padding: 0; }
+.toast:has(button) { display: flex; align-items: center; white-space: nowrap; }
 
 /* folha de lançamento e diálogos */
 dialog { border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); padding: 0; box-shadow: var(--shadow-lg); }
@@ -319,7 +387,7 @@ dialog.box[open] { animation: fade .2s ease-out; }
 .where { font-size: var(--fs-md); background: var(--accent-soft); color: var(--ink); border-radius: 11px; padding: 10px 12px; margin: 0; }
 .actions { display: flex; gap: 8px; }
 .actions .primary { flex: 1; padding: 13px; font-size: var(--fs-base); }
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(88px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 12px; font-weight: 500; font-size: var(--fs-md); z-index: 30; max-width: calc(100% - 32px); text-align: center; box-shadow: var(--shadow-lg); animation: toast .3s var(--ease); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 12px; font-weight: 500; font-size: var(--fs-md); z-index: 30; max-width: calc(100% - 32px); text-align: center; box-shadow: var(--shadow-lg); animation: toast .3s var(--ease); }
 @keyframes toast { from { opacity: 0; transform: translate(-50%, 10px) scale(.96); } }
 
 /* configurações e bloqueio (usados pelo vault.js) */
@@ -376,22 +444,16 @@ html.locked body { overflow: hidden; }
 @media (min-width: 760px) {
   body { padding-left: 32px; padding-right: 32px; }
   .wrap { max-width: 1100px; gap: 18px; }
-  .tabs { max-width: 420px; }
+  .bento { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .ringhero.tile .ring { width: 130px; }
+  .tabbar { left: 50%; right: auto; transform: translateX(-50%); bottom: 18px; width: 460px; border: 1px solid var(--rule); border-radius: 24px; padding: 8px 10px; box-shadow: var(--shadow-lg); }
+  .swipe-hint { display: none; }
   .stack { display: block; columns: 2; column-gap: 18px; }
   .stack > * { break-inside: avoid; margin-bottom: 18px; }
   .stack > .hero, .stack > .ychips, .stack > .story-open { column-span: all; }
   .story-open { justify-self: start; }
-  .ringhero { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "ring stats" "ring sub"; align-items: center; justify-items: stretch; column-gap: 36px; text-align: left; padding: 22px 26px; background: var(--sheet); border: 1px solid var(--rule); box-shadow: var(--shadow); border-radius: 22px; }
-  .ringhero .ring { grid-area: ring; width: 230px; }
-  .ringhero .hero-stats { grid-area: stats; margin-top: 0; align-self: end; }
-  .ringhero .sub { grid-area: sub; align-self: start; margin-top: 12px; }
-  .ringhero .hero-stats b { font-size: 1.15rem; }
-  .fab { left: auto; right: max(32px, calc((100vw - 1100px) / 2)); transform: none; }
-  .fab:hover { transform: translateY(-2px); }
-  .fab:active { transform: scale(.96); }
-  body::after { display: none; }
   dialog.sheet { margin: auto; border-radius: 22px; border-bottom: 1px solid var(--rule); max-height: 90%; }
-  .toast { bottom: 32px; }
+  .toast { bottom: 100px; }
 }
 /* valores escondidos: os números ficam borrados até tocar no olho de novo */
 html.privacy :is(.num, .val, .big, .owed, .tot, .hero-stats b, .ytable td:not(.mname), .ytiles b, .ytiles small, .fv-leg strong, .cat-top .num, .ychart text, .where b) { filter: blur(7px); transition: filter .25s; user-select: none; }
@@ -451,11 +513,6 @@ html.privacy .story-card .v { filter: blur(10px); }
     </div>
   </header>
   <span class="sync" id="syncState" aria-live="polite">Abrindo…</span>
-  <div class="tabs" role="tablist" aria-label="Visão">
-    <button type="button" role="tab" id="tabMonth" aria-selected="true">Mês</button>
-    <button type="button" role="tab" id="tabYear" aria-selected="false">12 meses</button>
-    <button type="button" role="tab" id="tabArch" aria-selected="false">Anos</button>
-  </div>
 
   <div id="viewYear" class="stack" hidden>
     <section class="hero" aria-labelledby="yLbl">
@@ -521,21 +578,30 @@ html.privacy .story-card .v { filter: blur(10px); }
     </section>
   </div>
 
-  <div id="viewMonth" class="stack">
-
-  <section class="hero ringhero" id="hero" aria-live="polite">
+  <div id="viewMonth">
+  <div class="bento" id="bento">
+  <section class="hero ringhero tile w2" id="hero" aria-live="polite">
     <div class="ring" title="Quanto do dinheiro do mês já foi usado">
       <svg viewBox="0 0 220 220" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" style="stop-color:var(--ring-a)"/><stop offset="1" style="stop-color:var(--ring-b)"/></linearGradient></defs>
         <circle cx="110" cy="110" r="96" class="ring-track"/><circle cx="110" cy="110" r="96" class="ring-bar" id="heroRing" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg>
-      <div class="ring-in"><span class="lbl" id="heroLbl">Sobra para o mês</span><span class="big num" id="heroVal">—</span><span class="ring-pct" id="heroPct"></span></div>
+      <div class="ring-in"><span class="ring-pct" id="heroPct"></span></div>
     </div>
-    <span class="sub" id="heroSub"></span>
+    <div class="txt"><span class="lbl" id="heroLbl">Sobra para o mês</span><span class="big num" id="heroVal">—</span><span class="sub" id="heroSub"></span></div>
     <div class="hero-stats">
       <div><span>Entra</span><b id="hsIn">—</b></div>
       <div><span>Contas do dia</span><b id="hsBills">—</b></div>
       <div><span>Gastos do mês</span><b id="hsDaily">—</b></div>
     </div>
   </section>
+  <button type="button" class="tile" data-open="hIn"><span class="tk">Entra</span><b class="tv num" id="tIn">—</b><small id="tInSub"></small><svg class="spark" id="tInSpark" viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"></svg></button>
+  <button type="button" class="tile" data-open="hBills"><span class="tk" id="tBillsK">Contas do dia</span><b class="tv num" id="tBills">—</b><small id="tBillsSub"></small><span class="tprog"><i id="tBillsBar"></i></span></button>
+  <button type="button" class="tile w2" data-open="hCats"><span class="tk">Onde você gasta</span><span class="tmore">ver tudo ›</span><span class="tcats" id="tCats"></span></button>
+  <button type="button" class="tile" id="tPartnerTile" data-go="partner"><span class="tk" id="tPartnerK">Te deve</span><b class="tv num" id="tPartner" style="color:var(--renan)">—</b><small id="tPartnerSub"></small><span class="tbars" id="tPartnerBars"></span></button>
+  <button type="button" class="tile" data-open="hRes"><span class="tk">Reserva</span><b class="tv num" id="tRes" style="color:var(--accent)">—</b><small id="tResSub"></small><span class="tprog"><i id="tResBar"></i></span></button>
+  <button type="button" class="tile w2 trow" data-open="hDaily"><span><span class="tk">Débito e PIX</span><b class="tv num" id="tDaily">—</b><small id="tDailySub"></small></span><span class="tbars wide" id="tDailyBars"></span></button>
+  </div>
+  <p class="hint swipe-hint">Arraste para o lado para trocar de mês</p>
+  <div id="details" hidden>
 
   <section class="block" aria-labelledby="hIn">
     <div class="block-head"><h2 id="hIn">Entra</h2><span class="tot num" id="totIn"></span></div>
@@ -550,25 +616,6 @@ html.privacy .story-card .v { filter: blur(10px); }
   <section class="block" aria-labelledby="hDaily">
     <div class="block-head"><h2 id="hDaily">Gastos do mês (débito e PIX)</h2><span class="tot num" id="totDaily"></span></div>
     <div id="listDaily"></div>
-  </section>
-
-  <section class="block" aria-labelledby="hRenan">
-    <div class="block-head"><h2 id="hRenan">Acerto da divisão</h2></div>
-    <div class="renan-box">
-      <span class="hint" id="owedLbl">Te deve hoje</span>
-      <span class="owed num" id="owed">—</span>
-      <span class="hint" id="owedSub"></span>
-      <div id="renanLists"></div>
-      <div class="row">
-        <button class="btn" id="reportBtn" type="button">Copiar resumo para o WhatsApp</button>
-      </div>
-    </div>
-  </section>
-
-  <section class="block" aria-labelledby="hBal">
-    <div class="block-head"><h2 id="hBal">Saldo da divisão</h2></div>
-    <div id="balBox"></div>
-    <div class="row" style="padding:4px 0 8px"><button class="btn" id="oweAdd" type="button">+ O que eu devo</button></div>
   </section>
 
   <section class="block" aria-labelledby="hRes">
@@ -602,9 +649,42 @@ html.privacy .story-card .v { filter: blur(10px); }
     <div id="catsBox"></div>
   </section>
   </div>
+  </div>
+
+  <div id="viewPartner" class="stack" hidden>
+  <section class="block" aria-labelledby="hRenan">
+    <div class="block-head"><h2 id="hRenan">Acerto da divisão</h2></div>
+    <div class="renan-box">
+      <span class="hint" id="owedLbl">Te deve hoje</span>
+      <span class="owed num" id="owed">—</span>
+      <span class="hint" id="owedSub"></span>
+      <div id="renanLists"></div>
+      <div class="row">
+        <button class="btn" id="reportBtn" type="button">Copiar resumo para o WhatsApp</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" aria-labelledby="hBal">
+    <div class="block-head"><h2 id="hBal">Saldo da divisão</h2></div>
+    <div id="balBox"></div>
+    <div class="row" style="padding:4px 0 8px"><button class="btn" id="oweAdd" type="button">+ O que eu devo</button></div>
+  </section>
+
+  </div>
+
+  <dialog id="detail" class="sheet detail" aria-label="Detalhes">
+    <div class="sheet-body"><div class="sheet-head"><span></span><button class="icon-btn" id="detailClose" type="button">Fechar</button></div><div id="detailBody"></div><p class="hint swipe-hint">Arraste um item para o lado para marcar como pago ou apagar</p></div>
+  </dialog>
 </div>
 
-<button class="fab" id="fab" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Lançar</button>
+<nav class="tabbar" role="tablist" aria-label="Visão">
+  <button type="button" role="tab" id="tabMonth" aria-selected="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Mês</button>
+  <button type="button" role="tab" id="tabYear" aria-selected="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>12 meses</button>
+  <button class="fab" id="fab" type="button" aria-label="Lançar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button type="button" role="tab" id="tabArch" aria-selected="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/></svg>Anos</button>
+  <button type="button" role="tab" id="tabPartner" aria-selected="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2A5 5 0 0 1 21 19"/></svg><span id="tabPartnerTxt">Divisão</span></button>
+</nav>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <dialog id="sheet" class="sheet" aria-labelledby="fTitle">
@@ -822,7 +902,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     applyProfile();
     if (!state.month) state.month = shiftMonth(salaryMonthOf(today0()), 1);
     const v = monthView(state.month), t0 = today0();
-    $("title").innerHTML = state.view === "year" ? "12 meses" : state.view === "arch" ? "Anos" : `${monthOnly(v.N).replace(/^./, c => c.toUpperCase())} <span class="yr">${v.N.slice(0, 4)}</span>`;
+    $("tabPartnerTxt").textContent = hasPartner() ? P() : "Ajustes";
+    $("title").innerHTML = state.view === "year" ? "12 meses" : state.view === "arch" ? "Anos" : state.view === "partner" ? esc(P()) : `${monthOnly(v.N).replace(/^./, c => c.toUpperCase())} <span class="yr">${v.N.slice(0, 4)}</span>`;
     if (state.view === "year") renderYear();
     if (state.view === "arch") renderArch();
 
@@ -839,7 +920,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     const used = Math.min(100, Math.max(0, v.left < 0 ? 100 : v.spent / pool * 100));
     $("heroRing").style.strokeDashoffset = future ? 100 : (100 - used).toFixed(1);
     $("heroRing").classList.toggle("over", v.left < 0);
-    $("heroPct").textContent = future ? "" : v.left < 0 ? "acima do que entrou" : `${Math.round(used)}% já gasto`;
+    $("heroPct").innerHTML = future ? `<small>ainda não começou</small>` : v.left < 0 ? `!<small>passou</small>` : `${Math.round(used)}%<small>gasto</small>`;
     $("heroSub").textContent = v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia` : "";
 
     // entra
@@ -886,6 +967,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     renderReserve(v);
     renderBalance();
     renderCats(v);
+    renderTiles(v);
   }
 
   // ---------- acerto com o Renan: só o que você já pagou ----------
@@ -995,6 +1077,63 @@ html.privacy .story-card .v { filter: blur(10px); }
   }
   // categorias que mais gastam e fixos x variáveis: tudo o que sai no ciclo (faturas, contas e gastos do mês)
   const CAT_COLORS = ["#8b5cf6", "#22d3ee", "#34d399", "#f0b73a", "#f472b6", "#60a5fa"];
+  // ---------- blocos do mosaico ----------
+  const kfmt = (c) => fmt(c).replace(/,\d\d$/, "");
+  function renderTiles(v) {
+    // entra: valor do mês e a linha dos últimos 6 meses
+    $("tIn").textContent = kfmt(v.totIn + v.renan);
+    $("tInSub").textContent = hasPartner() && v.renan ? `salário + ${P()}` : `${v.income.length} ${v.income.length === 1 ? "entrada" : "entradas"}`;
+    const hist = Array.from({ length: 6 }, (_, k) => { const w = monthView(shiftMonth(v.N, k - 5)); return w.totIn + w.renan; }), hmax = Math.max(1, ...hist);
+    $("tInSpark").innerHTML = `<polyline points="${hist.map((x, k) => `${k * 24},${(26 - x / hmax * 22).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--in)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    // contas do dia: quantas já foram pagas
+    const groups = [...Object.values(v.cards).map(l => ({ amt: full(l), paid: l.every(i => i.paid) })), ...v.bills.map(([i]) => ({ amt: i.amount, paid: !!i.paid }))];
+    const np = groups.filter(g => g.paid).length, ap = groups.filter(g => g.paid).reduce((a, g) => a + g.amt, 0);
+    $("tBillsK").textContent = `Contas ${ddmm(v.payday)}`; $("tBills").textContent = kfmt(v.totBills);
+    $("tBillsSub").textContent = groups.length ? `${np} de ${groups.length} pagas` : "nada lançado";
+    $("tBillsBar").style.width = `${v.totBills ? ap / v.totBills * 100 : 0}%`;
+    // onde você gasta: rosca com as maiores categorias (sua parte)
+    const all = [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0]), ...v.daily], by = {};
+    all.forEach(i => { const c = i.cat || "Outros", x = Math.max(0, i.amount - (i.renan || 0)); by[c] = (by[c] || 0) + x; });
+    let cats = Object.entries(by).filter(([, x]) => x > 0).sort((a, b) => b[1] - a[1]);
+    const tot = cats.reduce((a, [, x]) => a + x, 0);
+    if (cats.length > 5) cats = [...cats.slice(0, 4), ["Outras", cats.slice(4).reduce((a, [, x]) => a + x, 0)]];
+    let off = 0;
+    $("tCats").innerHTML = !tot ? `<small>Nenhum gasto lançado neste mês.</small>` : `<svg viewBox="0 0 42 42" aria-hidden="true">${cats.map(([, x], k) => { const pc = x / tot * 100, c = `<circle cx="21" cy="21" r="15.9" fill="none" stroke="${k < 4 ? CAT_COLORS[k] : "var(--neutral)"}" stroke-width="6" pathLength="100" stroke-dasharray="${Math.max(0, pc - 0.6).toFixed(2)} ${(100 - pc + 0.6).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" style="animation-delay:${k * 0.08}s"/>`; off += pc; return c; }).join("")}</svg>
+      <span class="tchips">${cats.map(([c, x], k) => `<span><b class="dot" style="background:${k < 4 ? CAT_COLORS[k] : "var(--neutral)"}"></b>${esc(c)} ${Math.round(x / tot * 100)}%</span>`).join("")}</span>`;
+    // divisão
+    $("tPartnerTile").hidden = !hasPartner();
+    if (hasPartner()) {
+      const L = renanLedger();
+      $("tPartnerK").textContent = `${P()} te deve`; $("tPartner").textContent = kfmt(Math.max(0, L.total));
+      $("tPartnerSub").textContent = L.pending.length ? `${L.pending.length} ${L.pending.length === 1 ? "pendente" : "pendentes"}` : "nada pendente";
+      const pv = L.pending.slice(-6).map(x => x.left), pmax = Math.max(1, ...pv);
+      $("tPartnerBars").innerHTML = pv.map((x, k) => `<i style="height:${Math.max(8, x / pmax * 100)}%;animation-delay:${k * 0.05}s"></i>`).join("");
+    }
+    // reserva
+    const bal = reserveBalance();
+    $("tRes").textContent = bal == null ? "—" : kfmt(bal);
+    $("tResSub").textContent = bal == null ? "toque para informar" : `+ ${kfmt(Math.round(bal * (Math.pow(1 + yearRate(), 21 / 252) - 1)))}/mês rendendo`;
+    $("tResBar").parentElement.hidden = true;
+    // débito e PIX: barras por dia
+    $("tDaily").textContent = fmt(v.spent);
+    $("tDailySub").textContent = `${v.daily.length} ${v.daily.length === 1 ? "gasto" : "gastos"}`;
+    const byDay = {}; v.daily.forEach(i => { const k = isoOf(itemDate(i, v.N)); byDay[k] = (byDay[k] || 0) + i.amount; });
+    const dv = Object.keys(byDay).sort().slice(-12).map(k => byDay[k]), dmax = Math.max(1, ...dv);
+    $("tDailyBars").innerHTML = dv.map((x, k) => `<i style="height:${Math.max(8, x / dmax * 100)}%;animation-delay:${k * 0.04}s"></i>`).join("");
+  }
+  // tocar num bloco abre a lista completa numa folha que sobe
+  function openDetail(h) {
+    const sec = document.querySelector(`section[aria-labelledby="${h}"]`); if (!sec) return;
+    $("detailBody").appendChild(sec); $("detail").showModal();
+  }
+  $("detail").addEventListener("close", () => { [...$("detailBody").children].forEach(c => $("details").appendChild(c)); });
+  $("detailClose").addEventListener("click", () => $("detail").close());
+  $("detail").addEventListener("click", (e) => { if (e.target === $("detail")) $("detail").close(); });
+  $("bento").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-open], [data-go]"); if (!t) return;
+    if (t.dataset.go) setView(t.dataset.go); else openDetail(t.dataset.open);
+  });
+
   function renderCats(v) {
     const mine = (state.catMode || "mine") === "mine";
     document.querySelectorAll("#catMode button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.cm === "mine") === mine)));
@@ -1295,7 +1434,8 @@ html.privacy .story-card .v { filter: blur(10px); }
   $("yTable").addEventListener("click", (e) => { const tr = e.target.closest("[data-month]"); if (tr) { state.month = tr.dataset.month; setView("month"); } });
   function setView(vw) {
     state.view = vw;
-    $("viewYear").hidden = vw !== "year"; $("viewMonth").hidden = vw !== "month"; $("viewArch").hidden = vw !== "arch";
+    $("viewYear").hidden = vw !== "year"; $("viewMonth").hidden = vw !== "month"; $("viewArch").hidden = vw !== "arch"; $("viewPartner").hidden = vw !== "partner";
+    $("tabPartner").setAttribute("aria-selected", String(vw === "partner"));
     $("tabYear").setAttribute("aria-selected", String(vw === "year")); $("tabMonth").setAttribute("aria-selected", String(vw === "month")); $("tabArch").setAttribute("aria-selected", String(vw === "arch"));
     $("prev").hidden = $("next").hidden = vw !== "month";
     render(); window.scrollTo(0, 0);
@@ -1303,6 +1443,59 @@ html.privacy .story-card .v { filter: blur(10px); }
   $("tabMonth").addEventListener("click", () => setView("month"));
   $("tabYear").addEventListener("click", () => setView("year"));
   $("tabArch").addEventListener("click", () => setView("arch"));
+  $("tabPartner").addEventListener("click", () => { if (hasPartner()) setView("partner"); else $("settingsBtn").click(); });
+
+  // arrastar a tela para o lado troca de mês
+  (() => {
+    let x0 = null, y0 = 0;
+    $("viewMonth").addEventListener("touchstart", (e) => { if (e.touches.length !== 1) { x0 = null; return; } x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+    $("viewMonth").addEventListener("touchend", (e) => {
+      if (x0 == null) return;
+      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+      if (Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
+      const dir = dx < 0 ? 1 : -1;
+      state.month = shiftMonth(state.month, dir); state.open = {};
+      const vm = $("viewMonth"); vm.classList.remove("go-next", "go-prev"); void vm.offsetWidth; vm.classList.add(dir > 0 ? "go-next" : "go-prev");
+      if (navigator.vibrate) navigator.vibrate(8);
+      render();
+    }, { passive: true });
+  })();
+
+  // arrastar um item da lista para a esquerda: marca como pago (contas) ou apaga, com "desfazer"
+  (() => {
+    let row = null, x0 = 0, y0 = 0, dx = 0, lock = null;
+    const actionOf = (line) => line.querySelector(":scope > .tick") ? "✓ Pago" : line.querySelector(":scope > [data-edit], :scope[data-edit]") || line.matches(".tap[data-edit]") ? "🗑 Apagar" : null;
+    $("detailBody").addEventListener("touchstart", (e) => {
+      const line = e.target.closest(".line"); if (!line || e.target.closest("button.tick") || !actionOf(line)) return;
+      row = line; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; lock = null;
+    }, { passive: true });
+    $("detailBody").addEventListener("touchmove", (e) => {
+      if (!row) return;
+      const mx = e.touches[0].clientX - x0, my = e.touches[0].clientY - y0;
+      if (lock == null && (Math.abs(mx) > 8 || Math.abs(my) > 8)) lock = Math.abs(mx) > Math.abs(my) ? "x" : "y";
+      if (lock !== "x") return;
+      dx = Math.min(0, mx); row.dataset.swipe = actionOf(row); row.classList.add("swiping"); row.classList.remove("back");
+      row.style.transform = `translateX(${Math.max(-140, dx)}px)`;
+    }, { passive: true });
+    $("detailBody").addEventListener("touchend", () => {
+      if (!row) return;
+      const line = row, act = actionOf(line); row = null;
+      line.classList.remove("swiping"); line.classList.add("back"); line.style.transform = "";
+      if (lock !== "x" || dx > -90) return;
+      if (navigator.vibrate) navigator.vibrate(12);
+      const tick = line.querySelector(":scope > .tick");
+      if (tick) {
+        const at = [...tick.attributes].find(x => /^data-(paid|card|rpaid|opaid|cardpay)$/.test(x.name)), was = tick.getAttribute("aria-checked") === "true";
+        tick.click();
+        toast(was ? "Voltou para pendente." : "Marcado como pago.", at ? () => { const t = document.querySelector(`[${at.name}="${CSS.escape(at.value)}"]`); if (t) t.click(); } : null);
+        return;
+      }
+      const ed = line.matches("[data-edit]") ? line : line.querySelector("[data-edit]"); if (!ed || !store) return;
+      const [ym, id] = ed.dataset.edit.split("|"), before = itemsOf(ym), it = before.find(i => i.id === id); if (!it) return;
+      save(ym, before.filter(i => i.id !== id));
+      toast(`${it.desc} apagado.`, () => save(ym, before));
+    });
+  })();
 
   // ---------- cliques na tela ----------
   document.querySelector(".wrap").addEventListener("click", (e) => {
@@ -1595,7 +1788,13 @@ html.privacy .story-card .v { filter: blur(10px); }
 
   // ---------- avisos e sincronização ----------
   let toastTimer = null;
-  function toast(text) { $("toast").textContent = text; $("toast").hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $("toast").hidden = true, 2800); }
+  function toast(text, undo) {
+    const el = $("toast"); el.textContent = text;
+    // com uma folha aberta, o aviso vai para dentro dela (senão fica por baixo e não dá para tocar)
+    const host = [...document.querySelectorAll("dialog[open]")].pop() || document.body; if (el.parentElement !== host) host.appendChild(el);
+    if (undo) { const b = document.createElement("button"); b.type = "button"; b.textContent = "Desfazer"; b.onclick = () => { el.hidden = true; undo(); }; el.appendChild(b); }
+    el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, undo ? 5000 : 2800);
+  }
   const SYNC = { syncing: "Sincronizando…", ok: "Sincronizado", pending: "Salvando…", offline: "Sem internet · salvo no aparelho", error: "Erro ao sincronizar" };
   // ---------- tema ----------
   const mqDark = window.matchMedia("(prefers-color-scheme: dark)");

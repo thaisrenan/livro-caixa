@@ -379,7 +379,10 @@ dialog.box[open] { animation: fade .2s ease-out; }
 .field > span, .flabel { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; color: var(--muted); }
 .field input, .lock-text { width: 100%; padding: 11px 12px; border: 1px solid var(--rule); border-radius: 11px; background: var(--sheet); transition: border-color .15s, box-shadow .15s; font-size: var(--fs-base); }
 .field input:focus, .lock-text:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.two > * { min-width: 0; }
+.field input[type="date"] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; display: block; min-height: 46px; text-align: left; }
+.field input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .money { position: relative; }
 .money b { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 500; }
 .money input { padding-left: 38px; font-variant-numeric: tabular-nums; }
@@ -706,7 +709,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     <div class="field" id="rowScope" hidden><span class="flabel">Aplicar a</span>
       <div class="chips" id="fScope"><button type="button" data-scope="one" aria-pressed="true">Só este mês</button><button type="button" data-scope="next" aria-pressed="false" id="scopeNext">Este e os próximos</button></div>
     </div>
-    <label class="field" id="rowRepeat" hidden><span>Repetir por quantos meses</span><input id="fRepeat" inputmode="numeric" value="1" maxlength="2" aria-describedby="repeatHint"><small class="hint" id="repeatHint"></small></label>
+    <label class="field" id="rowRepeat" hidden><span id="repeatLbl">Repetir por quantos meses</span><input id="fRepeat" inputmode="numeric" value="1" maxlength="2" aria-describedby="repeatHint"><small class="hint" id="repeatHint"></small></label>
     <div class="field" id="rowSplit"><span class="flabel" id="splitLbl">Dividir</span>
       <div class="chips" id="fSplit"><button type="button" data-split="0" aria-pressed="true">Não</button><button type="button" data-split="half" aria-pressed="false">Metade</button><button type="button" data-split="all" aria-pressed="false" id="splitAll">É tudo da pessoa</button></div>
     </div>
@@ -1572,9 +1575,14 @@ html.privacy .story-card .v { filter: blur(10px); }
     }
     const onCard = hows && cardMethod(form.how);
     $("rowInst").hidden = !onCard || form.kind !== "gasto" || !!form.editing;
-    $("rowRepeat").hidden = (form.kind !== "conta" && form.kind !== "entrada") || !!(form.editing && form.editing.item.inst);
-    const what = form.kind === "entrada" ? "a entrada" : "a conta";
-    $("repeatHint").textContent = form.editing
+    // repetir: contas, entradas e gastos no débito/PIX (no cartão, gasto novo usa parcelas)
+    // parcelado (ex.: 1/6): o campo vira "total de parcelas", para estender a série
+    const instM = form.editing && /^(\d+)\/(\d+)$/.exec(form.editing.item.inst || "");
+    $("rowRepeat").hidden = !["conta", "entrada", "gasto"].includes(form.kind) || !!(form.editing && form.editing.item.inst && !(instM && form.editing.item.group)) || (!form.editing && form.kind === "gasto" && !!onCard);
+    $("repeatLbl").textContent = instM ? "Total de parcelas" : "Repetir por quantos meses";
+    const what = form.kind === "entrada" ? "a entrada" : form.kind === "gasto" ? "o gasto" : "a conta";
+    $("repeatHint").textContent = instM ? `Esta é a parcela ${instM[1]} de ${instM[2]}. Aumente o total para lançar mais parcelas depois da última.`
+      : form.editing
       ? (form.runLen === 1 ? `Hoje ${what} está só neste mês.` : `Hoje ${what} está em ${form.runLen} meses seguidos a partir deste.`) + " Aumente o número para lançar nos meses seguintes."
       : `1 = só este mês. Com 12, ${what} entra em cada um dos próximos 12 meses.`;
     $("fSplit").querySelectorAll("[data-split]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.split === form.split)));
@@ -1637,7 +1645,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       // quantos meses seguidos, a partir deste, já têm esta conta ou entrada
       form.runLen = 1;
       while (form.runLen < 120 && itemsOf(shiftMonth(ym, form.runLen)).some(x => sameSeries(i, x))) form.runLen++;
-      $("fRepeat").value = String(form.runLen);
+      $("fRepeat").value = /^\d+\/\d+$/.test(i.inst || "") ? i.inst.split("/")[1] : String(form.runLen);
       form.scope = "one"; $("rowScope").hidden = !n;
       $("scopeNext").textContent = `Este e os próximos (${n + 1} meses)`;
       $("fScope").querySelectorAll("[data-scope]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scope === "one")));
@@ -1741,7 +1749,19 @@ html.privacy .story-card .v { filter: blur(10px); }
         }
         // repetir: lança nos meses seguintes que ainda não têm esta conta ou entrada
         let added = 0;
-        if ((kind === "fixed" || kind === "in") && !item.inst) {
+        const im = /^(\d+)\/(\d+)$/.exec(item.inst || ""), total = parseInt($("fRepeat").value, 10) || 0;
+        if (im && item.group && total > +im[2] && total <= 120) {
+          // estende a série: renumera as parcelas (k/N) e lança as que faltam depois da última
+          const n0 = +im[2], months = Object.keys(state.months).sort();
+          let last = p.ym;
+          for (const m of months) if (itemsOf(m).some(x => x.group === item.group)) { if (m > last) last = m; await save(m, itemsOf(m).map(x => x.group === item.group && /^\d+\/\d+$/.test(x.inst || "") ? { ...x, inst: `${x.inst.split("/")[0]}/${total}` } : x)); }
+          const tpl = itemsOf(last).find(x => x.group === item.group) || merged;
+          for (let j = n0 + 1; j <= total; j++) {
+            const m = shiftMonth(last, j - n0), { pm, ...copy } = tpl;
+            await save(m, itemsOf(m).concat({ ...copy, id: newId(), inst: `${j}/${total}`, day: null, paid: false }));
+            added++;
+          }
+        } else if ((kind === "fixed" || kind === "in" || kind === "var") && !item.inst) {
           const reps = Math.max(1, Math.min(120, parseInt($("fRepeat").value, 10) || 1));
           for (let k = 1; k < reps; k++) {
             const m = shiftMonth(p.ym, k);
@@ -1756,14 +1776,14 @@ html.privacy .story-card .v { filter: blur(10px); }
         base.cat = kind === "in" ? "Salário" : window.LivroCaixaImport ? LivroCaixaImport.guessCat(desc) : "Outros";
         const n = onCard && kind === "var" ? Math.max(1, Math.min(48, parseInt($("fInst").value, 10) || 1)) : 1;
         // conta: repete o mesmo valor nos meses seguintes, sem virar parcela
-        const reps = kind === "fixed" || kind === "in" ? Math.max(1, Math.min(60, parseInt($("fRepeat").value, 10) || 1)) : 1;
+        const reps = kind === "fixed" || kind === "in" || (kind === "var" && !onCard) ? Math.max(1, Math.min(60, parseInt($("fRepeat").value, 10) || 1)) : 1;
         if (reps > 1) {
           const rgroup = newId();
           for (let k = 0; k < reps; k++) {
             const ym = shiftMonth(p.ym, k);
-            await save(ym, itemsOf(ym).concat({ id: newId(), ...base, inst: null, group: rgroup, paid: kind === "in" && k === 0, day: base.day, pm: k ? null : base.pm }));
+            await save(ym, itemsOf(ym).concat({ id: newId(), ...base, inst: null, group: rgroup, paid: kind !== "fixed" && k === 0, day: base.day, pm: k ? null : base.pm }));
           }
-          toast(`${kind === "in" ? "Entrada" : "Conta"} lançada em ${reps} meses, até ${monthOnly(shiftMonth(p.ym, reps - 1))} de ${shiftMonth(p.ym, reps - 1).slice(0, 4)}.`);
+          toast(`${kind === "in" ? "Entrada lançada" : kind === "var" ? "Gasto lançado" : "Conta lançada"} em ${reps} meses, até ${monthOnly(shiftMonth(p.ym, reps - 1))} de ${shiftMonth(p.ym, reps - 1).slice(0, 4)}.`);
           $("sheet").close(); return;
         }
         const paidNow = kind === "in" || (kind === "var" && !onCard);

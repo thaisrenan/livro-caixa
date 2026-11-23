@@ -339,6 +339,8 @@ button.tile:not(.w2)::after { content: "›"; position: absolute; top: 10px; rig
 .ringhero.tile .txt .big { display: block; font-size: clamp(1.7rem, 8vw, 2.2rem); }
 .ringhero.tile .sub { margin: 0; font-size: var(--fs-sm); }
 .ringhero.tile .hero-stats { display: none; }
+#tPartnerTile[hidden] ~ #tDailyTile { grid-column: span 2; }
+.fabtxt { display: none; }
 .swipe-hint { text-align: center; font-size: var(--fs-xs); margin: 14px 0 0; opacity: .7; }
 #viewMonth.go-next .bento { animation: from-right .35s var(--ease); } #viewMonth.go-prev .bento { animation: from-left .35s var(--ease); }
 @keyframes from-right { from { transform: translateX(40px); opacity: 0; } } @keyframes from-left { from { transform: translateX(-40px); opacity: 0; } }
@@ -497,6 +499,35 @@ dialog.ask .rep { text-align: center; }
 .story-nav button { border: 0; background: none; }
 .story-share { position: absolute; bottom: calc(28px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 2; }
 html.privacy .story-card .v { filter: blur(10px); }
+/* computador: menu fixo à esquerda e as listas já abertas embaixo dos blocos */
+@media (min-width: 1000px) {
+  body { padding-left: 268px; padding-bottom: 48px; }
+  .wrap { max-width: 1160px; }
+  .tabbar { left: 16px; top: 16px; bottom: 16px; right: auto; width: 228px; transform: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 22px 12px; border-radius: 24px; border: 1px solid var(--rule); box-shadow: var(--shadow); }
+  .tabbar::before { content: "Finance"; order: -2; display: block; padding: 2px 10px 18px 52px; min-height: 40px; line-height: 38px; font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; letter-spacing: -.02em; color: var(--ink); background: url(icon-192.png) left 8px top 0 / 38px 38px no-repeat; }
+  .tabbar [role="tab"] { display: flex; justify-items: start; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 12px; font-size: var(--fs-md); }
+  .tabbar [role="tab"]:hover { background: var(--sheet-2); color: var(--ink); }
+  .tabbar [role="tab"][aria-selected="true"] { background: var(--accent-soft); }
+  .tabbar [role="tab"][aria-selected="true"] svg.i { transform: none; }
+  .tabbar [role="tab"] svg.i { width: 21px; height: 21px; }
+  .fab { order: -1; width: 100%; height: 46px; margin: 0 0 14px; border-radius: 14px; box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 35%, transparent); display: flex; gap: 8px; font-weight: 700; font-size: var(--fs-md); }
+  .fab svg.i { width: 20px; height: 20px; }
+  .fab .fabtxt { display: inline; }
+  .fab:active { transform: scale(.97); }
+  .top h1 { text-align: left; }
+  .bento { grid-template-columns: repeat(4, 1fr); }
+  #tPartnerTile[hidden] ~ #tDailyTile { grid-column: auto; }
+  /* 4 colunas x 3 linhas: a sobra ocupa duas linhas à esquerda */
+  .bento > #hero { grid-row: span 2; align-content: center; }
+  .bento > #hero .ring { width: 150px; }
+  #tPlanTile { order: 1; } .bento > [data-open="hRes"] { order: 2; } #tCatsTile { order: 3; } #tDailyTile { order: 4; }
+  /* listas completas visíveis, em duas colunas */
+  html #details[hidden] { display: block !important; columns: 2; column-gap: 16px; margin-top: 22px; }
+  #details > section { break-inside: avoid; margin-bottom: 16px; }
+  #details > section.flash { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+  .swipe-hint { display: none; }
+  .toast { left: calc(50% + 126px); }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
@@ -600,10 +631,11 @@ html.privacy .story-card .v { filter: blur(10px); }
   </section>
   <button type="button" class="tile" data-open="hIn"><span class="tk">Entra</span><b class="tv num" id="tIn">—</b><small id="tInSub"></small><svg class="spark" id="tInSpark" viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"></svg></button>
   <button type="button" class="tile" data-open="hBills"><span class="tk" id="tBillsK">Contas do dia</span><b class="tv num" id="tBills">—</b><small id="tBillsSub"></small><span class="tprog"><i id="tBillsBar"></i></span></button>
-  <button type="button" class="tile w2" data-open="hCats"><span class="tk">Onde você gasta</span><span class="tmore">ver tudo ›</span><span class="tcats" id="tCats"></span></button>
+  <button type="button" class="tile w2" id="tCatsTile" data-open="hCats"><span class="tk">Onde você gasta</span><span class="tmore">ver tudo ›</span><span class="tcats" id="tCats"></span></button>
   <button type="button" class="tile" id="tPartnerTile" data-go="partner"><span class="tk" id="tPartnerK">Te deve</span><b class="tv num" id="tPartner" style="color:var(--renan)">—</b><small id="tPartnerSub"></small><span class="tbars" id="tPartnerBars"></span></button>
+  <button type="button" class="tile" id="tPlanTile" data-plan="1"><span class="tk">Guardar no mês</span><b class="tv num" id="tPlan" style="color:var(--accent)">—</b><small id="tPlanSub"></small><span class="tprog"><i id="tPlanBar"></i></span></button>
   <button type="button" class="tile" data-open="hRes"><span class="tk">Reserva</span><b class="tv num" id="tRes" style="color:var(--accent)">—</b><small id="tResSub"></small><span class="tprog"><i id="tResBar"></i></span></button>
-  <button type="button" class="tile w2 trow" data-open="hDaily"><span><span class="tk">Débito e PIX</span><b class="tv num" id="tDaily">—</b><small id="tDailySub"></small></span><span class="tbars wide" id="tDailyBars"></span></button>
+  <button type="button" class="tile" id="tDailyTile" data-open="hDaily"><span class="tk">Débito e PIX</span><b class="tv num" id="tDaily">—</b><small id="tDailySub"></small><span class="tbars" id="tDailyBars"></span></button>
   </div>
   <p class="hint swipe-hint">Arraste para o lado para trocar de mês</p>
   <div id="details" hidden>
@@ -686,7 +718,7 @@ html.privacy .story-card .v { filter: blur(10px); }
 <nav class="tabbar" role="tablist" aria-label="Visão">
   <button type="button" role="tab" id="tabMonth" aria-selected="true"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>Mês</button>
   <button type="button" role="tab" id="tabYear" aria-selected="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>12 meses</button>
-  <button class="fab" id="fab" type="button" aria-label="Lançar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="fab" id="fab" type="button" aria-label="Lançar"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="fabtxt">Lançar</span></button>
   <button type="button" role="tab" id="tabArch" aria-selected="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/></svg>Anos</button>
   <button type="button" role="tab" id="tabPartner" aria-selected="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.6"/><path d="M15.5 14.2A5 5 0 0 1 21 19"/></svg><span id="tabPartnerTxt">Divisão</span></button>
 </nav>
@@ -774,6 +806,16 @@ html.privacy .story-card .v { filter: blur(10px); }
       <p class="hint" id="discMsg"></p>
     </section>
     <p class="hint" id="appVersion" style="text-align:center"></p>
+  </div>
+</dialog>
+
+<dialog id="planDlg" class="box ask" aria-labelledby="planTitle">
+  <div class="rep">
+    <h2 id="planTitle">Quanto quer guardar por mês?</h2>
+    <p class="hint">Esse valor sai da sobra de todos os meses, como se fosse uma conta. Quando você usar "Guardar" na Reserva, o que guardou é descontado dele. Deixe em branco para não planejar.</p>
+    <div class="field money"><b>R$</b><input id="planVal" inputmode="decimal" placeholder="0,00" aria-label="Valor para guardar por mês" autocomplete="off"></div>
+    <p class="msg" id="planMsg" role="alert"></p>
+    <div class="lock-actions col"><button class="btn primary" id="planSave" type="button">Salvar</button><button class="btn" id="planCancel" type="button" style="box-shadow:none;background:none;border-color:transparent">Cancelar</button></div>
   </div>
 </dialog>
 
@@ -900,6 +942,10 @@ html.privacy .story-card .v { filter: blur(10px); }
     v.renan = renanOf(cardItems) + renanOf(v.bills.map(x => x[0])) + renanOf(v.daily);
     v.spent = full(v.daily);
     v.left = v.totIn + v.renan - v.totBills - v.spent - full(v.saved) + full(v.taken);
+    // quanto você planeja guardar por mês (Configurações ou bloco "Guardar"): já sai da sobra, descontando o que já guardou
+    v.plan = state.settings.savePlan || 0;
+    v.planLeft = Math.max(0, v.plan - full(v.saved));
+    v.left -= v.planLeft;
     return v;
   }
 
@@ -934,7 +980,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("heroRing").style.strokeDashoffset = future ? 100 : (100 - used).toFixed(1);
     $("heroRing").classList.toggle("over", v.left < 0);
     $("heroPct").innerHTML = future ? `<small>ainda não começou</small>` : v.left < 0 ? `!<small>passou</small>` : `${Math.round(used)}%<small>gasto</small>`;
-    $("heroSub").textContent = v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia` : "";
+    $("heroSub").textContent = (v.planLeft ? `Já separando ${kfmt(v.planLeft)} para guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia` : "");
 
     // entra
     const lineEdit = (i, ym, txt, meta) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${txt}</div>${meta ? `<div class="meta">${meta}</div>` : ""}</div><span class="val num">${fmt(i.amount)}</span></div>`;
@@ -1127,22 +1173,44 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("tRes").textContent = bal == null ? "—" : kfmt(bal);
     $("tResSub").textContent = bal == null ? "toque para informar" : `+ ${kfmt(Math.round(bal * (Math.pow(1 + yearRate(), 21 / 252) - 1)))}/mês rendendo`;
     $("tResBar").parentElement.hidden = true;
+    // guardar no mês: o valor que você escolheu e quanto já guardou
+    const savedM = full(v.saved);
+    $("tPlan").textContent = v.plan ? kfmt(v.plan) : "Definir";
+    $("tPlanSub").textContent = v.plan ? (savedM >= v.plan ? `guardado ✓ ${kfmt(savedM)}` : `guardou ${kfmt(savedM)} · falta ${kfmt(v.plan - savedM)}`) : "toque para escolher um valor";
+    $("tPlanBar").style.width = `${v.plan ? Math.min(100, savedM / v.plan * 100) : 0}%`;
     // débito e PIX: barras por dia
-    $("tDaily").textContent = fmt(v.spent);
+    $("tDaily").textContent = kfmt(v.spent);
     $("tDailySub").textContent = `${v.daily.length} ${v.daily.length === 1 ? "gasto" : "gastos"}`;
     const byDay = {}; v.daily.forEach(i => { const k = isoOf(itemDate(i, v.N)); byDay[k] = (byDay[k] || 0) + i.amount; });
     const dv = Object.keys(byDay).sort().slice(-12).map(k => byDay[k]), dmax = Math.max(1, ...dv);
     $("tDailyBars").innerHTML = dv.map((x, k) => `<i style="height:${Math.max(8, x / dmax * 100)}%;animation-delay:${k * 0.04}s"></i>`).join("");
   }
+  // valor planejado para guardar todo mês
+  function openPlan() {
+    const v = state.settings.savePlan || 0;
+    $("planVal").value = v ? toInput(v) : ""; $("planMsg").textContent = "";
+    $("planDlg").showModal(); setTimeout(() => $("planVal").focus(), 50);
+  }
+  $("planSave").addEventListener("click", async () => {
+    const raw = $("planVal").value.trim(), val = raw ? parseAmount(raw) : 0;
+    if (!(val >= 0)) { $("planMsg").textContent = "Digite o valor, por exemplo 500,00."; return; }
+    if (!store) return;
+    await store.putSettings({ ...state.settings, savePlan: Math.round(val) });
+    $("planDlg").close(); toast(val ? `Pronto: ${fmt(val)} por mês já saem da sobra para guardar.` : "Sem valor planejado para guardar.");
+  });
+  $("planCancel").addEventListener("click", () => $("planDlg").close());
   // tocar num bloco abre a lista completa numa folha que sobe
+  const wide = window.matchMedia("(min-width: 1000px)");
   function openDetail(h) {
     const sec = document.querySelector(`section[aria-labelledby="${h}"]`); if (!sec) return;
+    if (wide.matches) { sec.scrollIntoView({ behavior: "smooth", block: "start" }); sec.classList.add("flash"); setTimeout(() => sec.classList.remove("flash"), 1400); return; }
     $("detailBody").appendChild(sec); $("detail").showModal();
   }
   $("detail").addEventListener("close", () => { [...$("detailBody").children].forEach(c => $("details").appendChild(c)); });
   $("detailClose").addEventListener("click", () => $("detail").close());
   $("detail").addEventListener("click", (e) => { if (e.target === $("detail")) $("detail").close(); });
   $("bento").addEventListener("click", (e) => {
+    if (e.target.closest("[data-plan]")) { openPlan(); return; }
     const t = e.target.closest("[data-open], [data-go]"); if (!t) return;
     if (t.dataset.go) setView(t.dataset.go); else openDetail(t.dataset.open);
   });
@@ -1252,7 +1320,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   function overview(N0) {
     return Array.from({ length: 12 }, (_, k) => {
       const v = monthView(shiftMonth(N0, k)), taken = full(v.taken), saved = full(v.saved);
-      return { N: v.N, M: v.M, entra: v.totIn + v.renan + taken, gasta: v.totBills + v.spent, saved, sobra: v.left, noIncome: !v.income.length };
+      return { N: v.N, M: v.M, entra: v.totIn + v.renan + taken, gasta: v.totBills + v.spent, saved, planLeft: v.planLeft, savePlan: v.plan, sobra: v.left, noIncome: !v.income.length };
     });
   }
   // ---------- anos: resumo de cada ano (meses de janeiro a dezembro, como na aba Mês), comparação e arquivo ----------
@@ -1353,19 +1421,25 @@ html.privacy .story-card .v { filter: blur(10px); }
     // sugestão de guardar: uma parte da sobra de cada mês (arredondada para baixo em R$ 10); o que já foi lançado em "Guardar" vale
     const pct = state.settings.savePct ?? 50;
     // previsto: a sugestão calculada sobre a sobra antes de guardar; real: o que foi guardado no mês
-    rows.forEach(r => { r.plan = Math.max(0, Math.floor((r.sobra + r.saved) * pct / 100 / 1000) * 1000); r.sug = r.saved ? 0 : r.plan; });
+    // com um valor planejado, ele já sai da sobra e vira o "previsto"; sem ele, vale a sugestão em %
+    rows.forEach(r => {
+      if (r.savePlan) { r.plan = r.savePlan; r.sug = 0; }
+      else { r.plan = Math.max(0, Math.floor((r.sobra + r.saved) * pct / 100 / 1000) * 1000); r.sug = r.saved ? 0 : r.plan; }
+    });
     $("ySavePct").innerHTML = [0, 30, 50, 70].map(v => `<button type="button" data-pct="${v}" aria-pressed="${v === pct}">${v ? v + "% da sobra" : "Não guardar"}</button>`).join("");
     const sum = (k) => rows.reduce((a, r) => a + r[k], 0);
     const tot = { entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sug: sum("sug"), plan: sum("plan"), sobra: sum("sobra") };
-    const toSave = tot.saved + tot.sug, resNow = reserveBalance();
+    const toSave = tot.saved + tot.sug + sum("planLeft"), resNow = reserveBalance();
     $("ySaveTot").textContent = fmt0(toSave);
-    $("ySaveHint").textContent = `Quanto da sobra de cada mês ir para a reserva · ${fmt0(toSave)} em 12 meses`;
+    const sp = state.settings.savePlan || 0;
+    $("ySaveHint").textContent = sp ? `Você planejou guardar ${fmt0(sp)} por mês (mude no bloco "Guardar no mês", na aba Mês) · ${fmt0(toSave)} em 12 meses` : `Quanto da sobra de cada mês ir para a reserva · ${fmt0(toSave)} em 12 meses`;
+    $("ySavePct").hidden = !!sp;
     // projeção da reserva: o que já está lá + o que vai entrar (programado ou sugestão), rendendo até o fim do 12º mês
     const t0 = today0(), end = lastBizDay(rows[11].N), endTxt = `${monthOnly(rows[11].N)} de ${rows[11].N.slice(0, 4)}`;
     const now = resNow == null ? [] : reserveBalance.lots.slice(), fut = [];
     rows.forEach(r => {
       itemsOf(r.M).forEach(i => { if (isReserve(i) && itemDate(i, r.M) > t0) fut.push({ v: i.kind === "invest" ? i.amount : -i.amount, d: itemDate(i, r.M) }); });
-      if (r.sug) fut.push({ v: r.sug, d: lastBizDay(r.M) });
+      if (r.sug || r.planLeft) fut.push({ v: r.sug || r.planLeft, d: lastBizDay(r.M) });
     });
     const Pj = lotsYield([...now, ...fut], end), futIn = fut.reduce((a, l) => a + l.v, 0);
     // "hoje" já inclui o que rendeu até agora; daqui para a frente: o bruto que falta e o IR de tudo
@@ -1752,7 +1826,9 @@ html.privacy .story-card .v { filter: blur(10px); }
     if (!store) return;
     const onCard = HOWS()[form.kind] && cardMethod(form.how);
     const kind = form.kind === "entrada" ? "in" : form.kind === "conta" ? "fixed" : "var";
-    const method = kind === "in" ? null : onCard ? cardMethod(form.how) : kind === "fixed" ? "Boleto" : debitMethod();
+    let method = kind === "in" ? null : onCard ? cardMethod(form.how) : kind === "fixed" ? "Boleto" : debitMethod();
+    // editando sem trocar a forma de pagamento: mantém a original (ex.: "PIX ou Transf.")
+    if (form.editing && kind !== "in" && howOf(form.editing.item) === form.how) method = form.editing.item.method;
     const renan = kind === "in" || !hasPartner() ? 0 : form.split === "all" ? amount : form.split === "half" ? Math.round(amount / 2) : 0;
     const keep = form.editing && $("fDate").value === form.editDate;
     const base = { kind, desc, amount, method, renan };

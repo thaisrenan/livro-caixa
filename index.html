@@ -468,6 +468,11 @@ html.privacy .ychart rect title { display: none; }
 .swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink); transform: scale(1.06); }
 dialog.ask { width: min(400px, calc(100% - 32px)); }
 dialog.ask .rep { text-align: center; }
+.fixlist { display: grid; gap: 6px; }
+.fixrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: var(--sheet); border-radius: 10px; padding: 8px 10px; }
+.fixrow > span:first-child { display: grid; min-width: 0; }
+.fixrow small { color: var(--muted); font-size: var(--fs-xs); }
+.fixrow .row { flex-wrap: nowrap; }
 /* perfil */
 .pf-cards { display: grid; gap: 8px; }
 .pf-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; background: var(--sheet-2); border-radius: 12px; padding: 8px 10px; }
@@ -582,7 +587,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     <section class="block" aria-labelledby="hTable">
       <div class="block-head"><h2 id="hTable">Mês a mês</h2><span class="hint">toque para abrir</span></div>
       <div class="ytable-wrap"><table class="ytable" id="yTable"></table></div>
-      <div class="importbox" id="yFix2" hidden style="margin:10px 0 4px"><span id="yFix2Text"></span><div class="row"><button class="btn small primary" type="button" id="yFix2Btn">Repetir as contas</button></div></div>
+      <div class="importbox" id="yFix2" hidden style="margin:10px 0 4px"><span id="yFix2Text"></span><div class="fixlist" id="yFix2List"></div></div>
       <div class="importbox" id="yFix" hidden style="margin:10px 0 4px"><span id="yFixText"></span><div class="row"><button class="btn small primary" type="button" id="yFixBtn">Repetir o salário</button></div></div>
       <details class="how"><summary>Como os valores são calculados</summary><p class="hint" id="yNote"></p></details>
     </section>
@@ -1412,6 +1417,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     const out = [];
     for (let k = 1; k < 12; k++) for (const [i, ym0] of rec) {
       const ym = shiftMonth(ym0, k);
+      if ((state.settings.noRepeat || []).includes(key(i))) continue;
       if (!itemsOf(ym).some(x => x.kind === i.kind && !x.inst && key(x) === key(i))) out.push({ i, ym });
     }
     return out;
@@ -1491,17 +1497,24 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("yFix2").hidden = !mf.length;
     if (mf.length) {
       const names = [...new Set(mf.map(x => x.i.desc))];
-      $("yFix2Text").textContent = `Algumas contas fixas deste mês faltam nos próximos meses (${names.slice(0, 6).join(", ")}${names.length > 6 ? "…" : ""}). Sem elas, a sobra desses meses aparece maior do que vai ser.`;
-      $("yFix2Btn").textContent = `Repetir ${names.length === 1 ? "essa conta" : `essas ${names.length} contas`} até ${monthOnly(rows[11].N)}`;
+      const byName = {}; mf.forEach(x => { const k = x.i.desc.trim().toLowerCase(); (byName[k] = byName[k] || { i: x.i, n: 0 }).n++; });
+      const list = Object.entries(byName);
+      $("yFix2Text").textContent = `${list.length === 1 ? "Uma conta fixa deste mês falta" : `${list.length} contas fixas deste mês faltam`} nos próximos meses. Sem elas, a sobra desses meses aparece maior do que vai ser. Quer incluir?`;
+      $("yFix2List").innerHTML = list.map(([k, { i, n }]) => `<div class="fixrow"><span><b>${esc(i.desc)}</b><small>${fmt(i.amount)} · falta em ${n} ${n === 1 ? "mês" : "meses"}</small></span>
+        <span class="row"><button class="btn small primary" type="button" data-fix-yes="${esc(k)}">Incluir</button><button class="btn small" type="button" data-fix-no="${esc(k)}">Não</button></span></div>`).join("");
     }
     $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" inclui a parte de ${P()}; "Gasta" conta o valor cheio das contas e dos gastos do mês. Em "Guardei", em cima está o que você guardou de verdade (botão Guardar da Reserva) e embaixo o previsto pela sugestão de ${pct}% da sobra; o número com → embaixo da sobra é quanto fica se você guardar a sugestão. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
   }
-  $("yFix2Btn").addEventListener("click", async () => {
-    if (!store) return;
-    const mf = missingFixed(shiftMonth(salaryMonthOf(today0()), 1)), by = {};
+  // uma a uma: "Incluir" repete aquela conta nos meses que faltam; "Não" para de perguntar sobre ela
+  $("yFix2List").addEventListener("click", async (e) => {
+    const yes = e.target.closest("[data-fix-yes]"), no = e.target.closest("[data-fix-no]");
+    if (!store || (!yes && !no)) return;
+    const k = (yes || no).dataset.fixYes || (yes || no).dataset.fixNo;
+    if (no) { await store.putSettings({ ...state.settings, noRepeat: [...new Set([...(state.settings.noRepeat || []), k])] }); toast("Certo, não vou mais perguntar sobre essa conta.", () => store.putSettings({ ...state.settings, noRepeat: (state.settings.noRepeat || []).filter(x => x !== k) })); return; }
+    const mf = missingFixed(shiftMonth(salaryMonthOf(today0()), 1)).filter(x => x.i.desc.trim().toLowerCase() === k), by = {};
     mf.forEach(({ i, ym }) => { const { pm, ...copy } = i; (by[ym] = by[ym] || []).push({ ...copy, id: newId(), paid: false, renanPaid: false }); });
     for (const [ym, list] of Object.entries(by)) await save(ym, itemsOf(ym).concat(list));
-    toast(`${mf.length} contas lançadas nos próximos meses.`);
+    toast(`${mf[0] ? mf[0].i.desc : "Conta"} incluída em mais ${mf.length} ${mf.length === 1 ? "mês" : "meses"}.`);
   });
   $("yFixBtn").addEventListener("click", async () => {
     const N0 = shiftMonth(salaryMonthOf(today0()), 1), sal = lastSalary(N0);

@@ -646,7 +646,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   <button type="button" class="tile" data-open="hBills"><span class="tk" id="tBillsK">Contas do dia</span><b class="tv num" id="tBills">—</b><small id="tBillsSub"></small><span class="tprog"><i id="tBillsBar"></i></span></button>
   <button type="button" class="tile w2" id="tCatsTile" data-open="hCats"><span class="tk">Onde você gasta</span><span class="tmore">ver tudo ›</span><span class="tcats" id="tCats"></span></button>
   <button type="button" class="tile" id="tPartnerTile" data-go="partner"><span class="tk" id="tPartnerK">Te deve</span><b class="tv num" id="tPartner" style="color:var(--renan)">—</b><small id="tPartnerSub"></small><span class="tbars" id="tPartnerBars"></span></button>
-  <button type="button" class="tile" id="tPlanTile" data-plan="1"><span class="tk">Guardar no mês</span><b class="tv num" id="tPlan" style="color:var(--accent)">—</b><small id="tPlanSub"></small><span class="tprog"><i id="tPlanBar"></i></span></button>
+  <button type="button" class="tile" id="tPlanTile" data-plan="1"><span class="tk">Meta de guardar</span><b class="tv num" id="tPlan" style="color:var(--accent)">—</b><small id="tPlanSub"></small><span class="tprog"><i id="tPlanBar"></i></span></button>
   <button type="button" class="tile" data-open="hRes"><span class="tk">Reserva</span><b class="tv num" id="tRes" style="color:var(--accent)">—</b><small id="tResSub"></small><span class="tprog"><i id="tResBar"></i></span></button>
   <button type="button" class="tile" id="tDailyTile" data-open="hDaily"><span class="tk">Débito e PIX</span><b class="tv num" id="tDaily">—</b><small id="tDailySub"></small><span class="tbars" id="tDailyBars"></span></button>
   </div>
@@ -997,7 +997,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("heroRing").style.strokeDashoffset = future ? 100 : (100 - used).toFixed(1);
     $("heroRing").classList.toggle("over", v.left < 0);
     $("heroPct").innerHTML = future ? `<small>ainda não começou</small>` : v.left < 0 ? `!<small>passou</small>` : `${Math.round(used)}%<small>gasto</small>`;
-    $("heroSub").textContent = (v.planLeft ? `Já separando ${kfmt(v.planLeft)} para guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia` : "");
+    $("heroSub").textContent = (v.planLeft ? `Já descontei ${kfmt(v.planLeft)} que faltam para a meta de guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia` : "");
 
     // entra
     // valor mostrado = sua parte; quando dividido, a meta lembra o valor inteiro
@@ -1190,7 +1190,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     // guardar no mês: o valor que você escolheu e quanto já guardou
     const savedM = full(v.saved);
     $("tPlan").textContent = v.plan ? kfmt(v.plan) : "Definir";
-    $("tPlanSub").textContent = v.plan ? (savedM >= v.plan ? `guardado ✓ ${kfmt(savedM)}` : `guardou ${kfmt(savedM)} · falta ${kfmt(v.plan - savedM)}`) : "toque para escolher um valor";
+    $("tPlanSub").textContent = v.plan ? (savedM >= v.plan ? `meta cumprida ✓ (${kfmt(savedM)} guardados)` : `já guardou ${kfmt(savedM)} · faltam ${kfmt(v.plan - savedM)}`) : "toque para escolher quanto guardar neste mês";
     $("tPlanBar").style.width = `${v.plan ? Math.min(100, savedM / v.plan * 100) : 0}%`;
     // débito e PIX: barras por dia
     $("tDaily").textContent = kfmt(v.mySpent);
@@ -1481,7 +1481,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     const toSave = tot.saved + tot.sug + sum("planLeft"), resNow = reserveBalance();
     $("ySaveTot").textContent = fmt0(toSave);
     const sp = rows.filter(r => r.savePlan).length;
-    $("ySaveHint").textContent = (sp ? `${sp === 1 ? "Um mês tem" : `${sp} meses têm`} valor planejado no bloco "Guardar no mês" e ele vale lá; nos outros, a sugestão abaixo. ` : "Quanto da sobra de cada mês ir para a reserva. ") + `${fmt0(toSave)} em 12 meses`;
+    $("ySaveHint").textContent = (sp ? `${sp === 1 ? "Um mês tem" : `${sp} meses têm`} valor planejado no bloco "Meta de guardar" e ele vale lá; nos outros, a sugestão abaixo. ` : "Quanto da sobra de cada mês ir para a reserva. ") + `${fmt0(toSave)} em 12 meses`;
     // projeção da reserva: o que já está lá + o que vai entrar (programado ou sugestão), rendendo até o fim do 12º mês
     const t0 = today0(), end = lastBizDay(rows[11].N), endTxt = `${monthOnly(rows[11].N)} de ${rows[11].N.slice(0, 4)}`;
     const now = resNow == null ? [] : reserveBalance.lots.slice(), fut = [];

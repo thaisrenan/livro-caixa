@@ -464,6 +464,8 @@ html.privacy .ychart rect title { display: none; }
 .swatches { display: flex; gap: 10px; margin-top: 4px; }
 .swatches button { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--sw); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .25); transition: transform .15s; }
 .swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 4px var(--ink); transform: scale(1.06); }
+dialog.ask { width: min(400px, calc(100% - 32px)); }
+dialog.ask .rep { text-align: center; }
 /* perfil */
 .pf-cards { display: grid; gap: 8px; }
 .pf-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; background: var(--sheet-2); border-radius: 12px; padding: 8px 10px; }
@@ -772,6 +774,14 @@ html.privacy .story-card .v { filter: blur(10px); }
       <p class="hint" id="discMsg"></p>
     </section>
     <p class="hint" id="appVersion" style="text-align:center"></p>
+  </div>
+</dialog>
+
+<dialog id="scopeDlg" class="box ask" aria-labelledby="scTitle">
+  <div class="rep">
+    <h2 id="scTitle">Alterar os próximos também?</h2>
+    <p class="hint" id="scText"></p>
+    <div class="lock-actions col"><button class="btn primary" id="scNext" type="button"></button><button class="btn" id="scOne" type="button"></button><button class="btn" id="scCancel" type="button" style="box-shadow:none;background:none;border-color:transparent">Cancelar</button></div>
   </div>
 </dialog>
 
@@ -1614,8 +1624,9 @@ html.privacy .story-card .v { filter: blur(10px); }
   }
 
   function seriesAfter(ym, item) {
-    if (item.inst || !["fixed", "in"].includes(item.kind)) return [];
-    const same = (i) => i.id !== item.id && i.kind === item.kind && !i.inst && (item.group ? i.group === item.group : !i.group && i.desc.trim().toLowerCase() === item.desc.trim().toLowerCase() && !!i.res === !!item.res);
+    // mesma série: lançados juntos (repetição ou parcelas) ou, em contas e entradas antigas, o mesmo nome
+    const same = (i) => i.id !== item.id && i.kind === item.kind && !!i.res === !!item.res && (item.group ? i.group === item.group
+      : !item.inst && !i.inst && !i.group && ["fixed", "in"].includes(item.kind) && i.desc.trim().toLowerCase() === item.desc.trim().toLowerCase());
     return Object.keys(state.months).filter(m => m > ym).sort().flatMap(m => itemsOf(m).filter(same).map(i => [m, i.id]));
   }
   async function applyToSeries(ym, item, fn) {
@@ -1627,6 +1638,18 @@ html.privacy .story-card .v { filter: blur(10px); }
   // mesma série: mesma repetição (group) ou, sem repetição, o mesmo nome e tipo
   const sameSeries = (item, i) => i.id !== item.id && i.kind === item.kind && !i.inst && !!i.res === !!item.res &&
     (item.group ? i.group === item.group : !i.group && i.desc.trim().toLowerCase() === item.desc.trim().toLowerCase());
+  // pergunta "só este / este e os próximos"; resolve "one", "next" ou null (cancelou)
+  function askScope(title, text, n, verb) {
+    return new Promise((resolve) => {
+      const d = $("scopeDlg");
+      $("scTitle").textContent = title; $("scText").textContent = text;
+      $("scOne").textContent = `${verb} só este mês`; $("scNext").textContent = `${verb} este e os próximos (${n + 1})`;
+      const done = (v) => { d.onclose = null; d.close(); resolve(v); };
+      $("scOne").onclick = () => done("one"); $("scNext").onclick = () => done("next"); $("scCancel").onclick = () => done(null);
+      d.onclose = () => resolve(null);
+      d.showModal(); $("scNext").focus();
+    });
+  }
   let delArmed = false;
   function openForm(ym, id) {
     const i = id ? itemsOf(ym).find(x => x.id === id) : null;
@@ -1646,7 +1669,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       form.runLen = 1;
       while (form.runLen < 120 && itemsOf(shiftMonth(ym, form.runLen)).some(x => sameSeries(i, x))) form.runLen++;
       $("fRepeat").value = /^\d+\/\d+$/.test(i.inst || "") ? i.inst.split("/")[1] : String(form.runLen);
-      form.scope = "one"; $("rowScope").hidden = !n;
+      form.scope = "one"; $("rowScope").hidden = true;
       $("scopeNext").textContent = `Este e os próximos (${n + 1} meses)`;
       $("fScope").querySelectorAll("[data-scope]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.scope === "one")));
     } else {
@@ -1734,6 +1757,17 @@ html.privacy .story-card .v { filter: blur(10px); }
     const keep = form.editing && $("fDate").value === form.editDate;
     const base = { kind, desc, amount, method, renan };
     if (!keep) { base.day = p.d.getDate(); base.pm = ymOf(p.d) !== p.ym ? ymOf(p.d) : null; if (kind === "fixed") base.adv = false; }
+    form.scope = "one";
+    if (form.editing) {
+      // lançamento que se repete e mudou nome, valor, forma de pagamento ou divisão: pergunta se vale para os próximos
+      const { ym, item } = form.editing, n = seriesAfter(ym, item).length;
+      const changed = item.desc !== desc || item.amount !== amount || (item.method || null) !== (method || null) || (item.renan || 0) !== renan;
+      if (n && changed) {
+        const ans = await askScope("Alterar os próximos também?", `"${item.desc}" se repete em mais ${n} ${n === 1 ? "mês" : "meses"} depois deste.`, n, "Alterar");
+        if (!ans) return;
+        form.scope = ans;
+      }
+    }
     $("fSave").disabled = true;
     try {
       if (form.editing) {
@@ -1797,10 +1831,13 @@ html.privacy .story-card .v { filter: blur(10px); }
       $("sheet").close();
     } finally { $("fSave").disabled = false; }
   });
-  $("fDel").addEventListener("click", () => {
+  $("fDel").addEventListener("click", async () => {
     if (!form.editing) return;
     if (!delArmed) { delArmed = true; $("fDel").textContent = "Toque de novo"; return; }
-    const { ym, item } = form.editing, all = form.scope === "next";
+    const { ym, item } = form.editing, n = seriesAfter(ym, item).length;
+    const ans = n ? await askScope("Excluir os próximos também?", `"${item.desc}" se repete em mais ${n} ${n === 1 ? "mês" : "meses"} depois deste.`, n, "Excluir") : "one";
+    if (!ans) { delArmed = false; $("fDel").textContent = "Excluir"; return; }
+    const all = ans === "next";
     save(ym, itemsOf(ym).filter(i => i.id !== item.id));
     if (all) applyToSeries(ym, item, (list, ids) => list.filter(i => !ids.has(i.id))).then(n => toast(`Excluído deste e de mais ${n} ${n === 1 ? "mês" : "meses"}.`));
     $("sheet").close(); if (!all) toast("Excluído.");

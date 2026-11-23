@@ -1003,7 +1003,11 @@ html.privacy .story-card .v { filter: blur(10px); }
     // valor mostrado = sua parte; quando dividido, a meta lembra o valor inteiro
     const whole = (i) => i.renan ? `conta toda ${fmt(i.amount)}` : "";
     const lineEdit = (i, ym, txt, meta) => { const m = [meta, whole(i)].filter(Boolean).join(" · "); return `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${txt}</div>${m ? `<div class="meta">${m}</div>` : ""}</div><span class="val num">${fmt(i.amount - (i.renan || 0))}</span></div>`; };
-    let h = v.income.map(i => lineEdit(i, v.M, `${esc(i.desc)} ${ddmm(v.payday)}`, "")).join("");
+    // cada entrada com a data dela (o 13º de 18/12 aparece como 18/12, não no dia do salário)
+    let h = v.income.slice().sort((a, b) => itemDate(a, v.M) - itemDate(b, v.M)).map(i => {
+      const d = i.day ? itemDate(i, v.M) : v.payday;
+      return lineEdit(i, v.M, `${esc(i.desc)} ${ddmm(d)}`, d > t0 ? "previsto" : "");
+    }).join("");
     if (!v.income.length) h += `<p class="empty">Nenhum salário lançado para ${ddmm(v.payday)}.</p>`;
     $("listIn").innerHTML = h;
     $("totIn").textContent = fmt(v.totIn);

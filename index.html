@@ -341,6 +341,9 @@ button.tile:not(.w2)::after { content: "›"; position: absolute; top: 10px; rig
 .ringhero.tile .hero-stats { display: none; }
 #tPartnerTile[hidden] ~ #tDailyTile { grid-column: span 2; }
 .fabtxt { display: none; }
+.endnote { width: 100%; margin-top: 12px; display: flex; align-items: center; gap: 12px; text-align: left; padding: 13px 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--in) 35%, var(--rule)); background: linear-gradient(135deg, var(--in-soft), var(--sheet) 80%); color: var(--ink); font: inherit; font-size: var(--fs-md); line-height: 1.4; animation: up .5s var(--ease) .3s both; }
+.endnote .en-ic { font-size: 1.3rem; }
+.endnote .en-go { margin-left: auto; color: var(--muted); font-size: 1.2rem; }
 .swipe-hint { text-align: center; font-size: var(--fs-xs); margin: 14px 0 0; opacity: .7; }
 #viewMonth.go-next .bento { animation: from-right .35s var(--ease); } #viewMonth.go-prev .bento { animation: from-left .35s var(--ease); }
 @keyframes from-right { from { transform: translateX(40px); opacity: 0; } } @keyframes from-left { from { transform: translateX(-40px); opacity: 0; } }
@@ -575,6 +578,11 @@ html.privacy .story-card .v { filter: blur(10px); }
         <div class="line nocheck"><div><div class="name">Reserva daqui a 12 meses</div><div class="meta" id="yResMeta"></div></div><span class="val num" id="yRes" style="color:var(--accent)">—</span></div>
       </div>
     </section>
+    <section class="block" aria-labelledby="hEnds" id="endsBlock" hidden>
+      <div class="block-head"><h2 id="hEnds">Parcelas acabando</h2><span class="tot num" id="endsTot" style="color:var(--in)"></span></div>
+      <div id="endsList"></div>
+    </section>
+
     <section class="block" aria-labelledby="hYield">
       <div class="block-head"><h2 id="hYield">Rendimento da reserva</h2><span class="tot num" id="yYieldTot" style="color:var(--in)"></span></div>
       <div id="yYield"></div>
@@ -642,6 +650,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   <button type="button" class="tile" data-open="hRes"><span class="tk">Reserva</span><b class="tv num" id="tRes" style="color:var(--accent)">—</b><small id="tResSub"></small><span class="tprog"><i id="tResBar"></i></span></button>
   <button type="button" class="tile" id="tDailyTile" data-open="hDaily"><span class="tk">Débito e PIX</span><b class="tv num" id="tDaily">—</b><small id="tDailySub"></small><span class="tbars" id="tDailyBars"></span></button>
   </div>
+  <button type="button" class="endnote" id="endNote" hidden></button>
   <p class="hint swipe-hint">Arraste para o lado para trocar de mês</p>
   <div id="details" hidden>
 
@@ -971,7 +980,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     const v = monthView(state.month), t0 = today0();
     $("tabPartnerTxt").textContent = hasPartner() ? P() : "Ajustes";
     $("title").innerHTML = state.view === "year" ? "12 meses" : state.view === "arch" ? "Anos" : state.view === "partner" ? esc(P()) : `${monthOnly(v.N).replace(/^./, c => c.toUpperCase())} <span class="yr">${v.N.slice(0, 4)}</span>`;
-    if (state.view === "year") renderYear();
+    if (state.view === "year") { renderYear(); renderEnds(); }
     if (state.view === "arch") renderArch();
 
     // sobra
@@ -1031,6 +1040,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     renderBalance();
     renderCats(v);
     renderTiles(v);
+    renderEndNote(v);
   }
 
   // ---------- acerto com o Renan: só o que você já pagou ----------
@@ -1206,6 +1216,37 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("planDlg").close(); toast(val ? `Pronto: ${fmt(val)} saem da sobra de ${mo} para guardar.` : `Sem valor planejado para ${mo}.`);
   });
   $("planCancel").addEventListener("click", () => $("planDlg").close());
+  // ---------- parcelas acabando: quando a última parcela passa, a sobra do mês seguinte aumenta ----------
+  // o mês (da aba Mês) em que um lançamento pesa: cartão e contas pagam no salário do fim do mês anterior
+  const viewMonthOf = (i, ym) => i.kind === "var" && !isCard(i) ? ym : shiftMonth(ym, 1);
+  function endingInstallments(from) {
+    const ev = {};
+    for (const ym of Object.keys(state.months)) for (const i of itemsOf(ym)) {
+      const m = /^(\d+)\/(\d+)$/.exec(i.inst || ""); if (!m || +m[1] !== +m[2] || i.kind === "in") continue;
+      const last = viewMonthOf(i, ym), free = shiftMonth(last, 1);
+      if (last < from || free > shiftMonth(from, 12)) continue;
+      const e = (ev[last] = ev[last] || { last, free, items: [], total: 0 }), mine = i.amount - (i.renan || 0);
+      e.items.push({ desc: i.desc, mine, n: m[2] }); e.total += mine;
+    }
+    return Object.values(ev).filter(e => e.total > 0).sort((a, b) => a.last < b.last ? -1 : 1);
+  }
+  const mName = (ym) => monthOnly(ym) + (ym.slice(0, 4) !== String(today0().getFullYear()) ? ` de ${ym.slice(0, 4)}` : "");
+  const endText = (e) => `Em ${mName(e.last)} ${e.items.length === 1 ? `acaba a última parcela de ${e.items[0].desc}` : `acabam ${e.items.length} parcelas`}, e sua sobra aumenta ${kfmt(e.total)} a partir de ${monthOnly(e.free)}.`;
+  function renderEndNote(v) {
+    const e = endingInstallments(v.N)[0];
+    $("endNote").hidden = !e;
+    if (e) $("endNote").innerHTML = `<span class="en-ic">🎉</span><span>${esc(endText(e))}</span><span class="en-go">›</span>`;
+  }
+  $("endNote").addEventListener("click", () => { setView("year"); setTimeout(() => $("endsBlock").scrollIntoView({ behavior: "smooth", block: "center" }), 150); });
+  function renderEnds() {
+    const list = endingInstallments(shiftMonth(salaryMonthOf(today0()), 1));
+    $("endsBlock").hidden = !list.length; if (!list.length) return;
+    $("endsTot").textContent = `+ ${kfmt(list.reduce((a, e) => a + e.total, 0))}/mês`;
+    $("endsList").innerHTML = list.map(e => `<div class="line nocheck"><div><div class="name">${esc(mName(e.last).replace(/^./, c => c.toUpperCase()))}: ${e.items.length} ${e.items.length === 1 ? "parcela acaba" : "parcelas acabam"}</div>
+      <div class="meta">${e.items.map(x => `${esc(x.desc)} (${x.n}x)`).join(", ")}</div></div><span class="val num" style="color:var(--in)">+ ${kfmt(e.total)}</span></div>`).join("") +
+      `<p class="hint" style="padding:6px 0 12px">A partir do mês seguinte à última parcela, esse valor deixa de sair e a sua sobra aumenta. Só a sua parte.</p>`;
+  }
+
   // tocar num bloco abre a lista completa numa folha que sobe
   const wide = window.matchMedia("(min-width: 1000px)");
   function openDetail(h) {

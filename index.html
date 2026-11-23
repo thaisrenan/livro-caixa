@@ -816,8 +816,8 @@ html.privacy .story-card .v { filter: blur(10px); }
 
 <dialog id="planDlg" class="box ask" aria-labelledby="planTitle">
   <div class="rep">
-    <h2 id="planTitle">Quanto quer guardar por mês?</h2>
-    <p class="hint">Esse valor sai da sobra de todos os meses, como se fosse uma conta. Quando você usar "Guardar" na Reserva, o que guardou é descontado dele. Deixe em branco para não planejar.</p>
+    <h2 id="planTitle">Quanto quer guardar neste mês?</h2>
+    <p class="hint">Vale só para este mês, não se repete nos outros. O valor sai da sobra, como se fosse uma conta. Quando você usar "Guardar" na Reserva, o que guardou é descontado dele. Deixe em branco para não planejar.</p>
     <div class="field money"><b>R$</b><input id="planVal" inputmode="decimal" placeholder="0,00" aria-label="Valor para guardar por mês" autocomplete="off"></div>
     <p class="msg" id="planMsg" role="alert"></p>
     <div class="lock-actions col"><button class="btn primary" id="planSave" type="button">Salvar</button><button class="btn" id="planCancel" type="button" style="box-shadow:none;background:none;border-color:transparent">Cancelar</button></div>
@@ -947,8 +947,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     v.renan = renanOf(cardItems) + renanOf(v.bills.map(x => x[0])) + renanOf(v.daily);
     v.spent = full(v.daily);
     v.left = v.totIn + v.renan - v.totBills - v.spent - full(v.saved) + full(v.taken);
-    // quanto você planeja guardar por mês (Configurações ou bloco "Guardar"): já sai da sobra, descontando o que já guardou
-    v.plan = state.settings.savePlan || 0;
+    // quanto você planeja guardar neste mês (bloco "Guardar no mês"): já sai da sobra, descontando o que já guardou
+    v.plan = (state.settings.savePlans || {})[N] || 0; // só o mês em que você definiu
     v.planLeft = Math.max(0, v.plan - full(v.saved));
     v.left -= v.planLeft;
     return v;
@@ -1190,9 +1190,10 @@ html.privacy .story-card .v { filter: blur(10px); }
     const dv = Object.keys(byDay).sort().slice(-12).map(k => byDay[k]), dmax = Math.max(1, ...dv);
     $("tDailyBars").innerHTML = dv.map((x, k) => `<i style="height:${Math.max(8, x / dmax * 100)}%;animation-delay:${k * 0.04}s"></i>`).join("");
   }
-  // valor planejado para guardar todo mês
+  // valor planejado para guardar, só no mês aberto (não se repete nos outros)
   function openPlan() {
-    const v = state.settings.savePlan || 0;
+    const v = (state.settings.savePlans || {})[state.month] || 0;
+    $("planTitle").textContent = `Quanto quer guardar em ${monthOnly(state.month)}?`;
     $("planVal").value = v ? toInput(v) : ""; $("planMsg").textContent = "";
     $("planDlg").showModal(); setTimeout(() => $("planVal").focus(), 50);
   }
@@ -1200,8 +1201,10 @@ html.privacy .story-card .v { filter: blur(10px); }
     const raw = $("planVal").value.trim(), val = raw ? parseAmount(raw) : 0;
     if (!(val >= 0)) { $("planMsg").textContent = "Digite o valor, por exemplo 500,00."; return; }
     if (!store) return;
-    await store.putSettings({ ...state.settings, savePlan: Math.round(val) });
-    $("planDlg").close(); toast(val ? `Pronto: ${fmt(val)} por mês já saem da sobra para guardar.` : "Sem valor planejado para guardar.");
+    const { savePlan, ...rest } = state.settings, plans = { ...(rest.savePlans || {}) }, mo = monthOnly(state.month);
+    if (val) plans[state.month] = Math.round(val); else delete plans[state.month];
+    await store.putSettings({ ...rest, savePlans: plans });
+    $("planDlg").close(); toast(val ? `Pronto: ${fmt(val)} saem da sobra de ${mo} para guardar.` : `Sem valor planejado para ${mo}.`);
   });
   $("planCancel").addEventListener("click", () => $("planDlg").close());
   // tocar num bloco abre a lista completa numa folha que sobe
@@ -1437,9 +1440,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     const tot = { entra: sum("entra"), gasta: sum("gasta"), saved: sum("saved"), sug: sum("sug"), plan: sum("plan"), sobra: sum("sobra") };
     const toSave = tot.saved + tot.sug + sum("planLeft"), resNow = reserveBalance();
     $("ySaveTot").textContent = fmt0(toSave);
-    const sp = state.settings.savePlan || 0;
-    $("ySaveHint").textContent = sp ? `Você planejou guardar ${fmt0(sp)} por mês (mude no bloco "Guardar no mês", na aba Mês) · ${fmt0(toSave)} em 12 meses` : `Quanto da sobra de cada mês ir para a reserva · ${fmt0(toSave)} em 12 meses`;
-    $("ySavePct").hidden = !!sp;
+    const sp = rows.filter(r => r.savePlan).length;
+    $("ySaveHint").textContent = (sp ? `${sp === 1 ? "Um mês tem" : `${sp} meses têm`} valor planejado no bloco "Guardar no mês" e ele vale lá; nos outros, a sugestão abaixo. ` : "Quanto da sobra de cada mês ir para a reserva. ") + `${fmt0(toSave)} em 12 meses`;
     // projeção da reserva: o que já está lá + o que vai entrar (programado ou sugestão), rendendo até o fim do 12º mês
     const t0 = today0(), end = lastBizDay(rows[11].N), endTxt = `${monthOnly(rows[11].N)} de ${rows[11].N.slice(0, 4)}`;
     const now = resNow == null ? [] : reserveBalance.lots.slice(), fut = [];

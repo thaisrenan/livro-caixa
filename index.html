@@ -946,6 +946,9 @@ html.privacy .story-card .v { filter: blur(10px); }
     // a parte do Renan inclui as compras divididas no débito e PIX
     v.renan = renanOf(cardItems) + renanOf(v.bills.map(x => x[0])) + renanOf(v.daily);
     v.spent = full(v.daily);
+    // só a sua parte: a divisão com a outra pessoa fica no acerto, não nas contas do mês
+    v.myBills = v.totBills - renanOf(cardItems) - renanOf(v.bills.map(x => x[0]));
+    v.mySpent = v.spent - renanOf(v.daily);
     v.left = v.totIn + v.renan - v.totBills - v.spent - full(v.saved) + full(v.taken);
     // quanto você planeja guardar neste mês (bloco "Guardar no mês"): já sai da sobra, descontando o que já guardou
     v.plan = (state.settings.savePlans || {})[N] || 0; // só o mês em que você definiu
@@ -977,28 +980,24 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("hero").classList.toggle("neg", v.left < 0);
     $("heroLbl").textContent = future ? `Vai sobrar para ${monthOnly(v.N)}` : living ? "Sobra para o mês" : `Sobrou de ${monthOnly(v.N)}`;
     countTo($("heroVal"), v.left);
-    $("hsIn").textContent = fmt(v.totIn + v.renan);
-    $("hsBills").textContent = fmt(v.totBills);
-    $("hsDaily").textContent = fmt(v.spent);
-    const pool = Math.max(1, v.left + v.spent);
-    const used = Math.min(100, Math.max(0, v.left < 0 ? 100 : v.spent / pool * 100));
+    $("hsIn").textContent = fmt(v.totIn);
+    $("hsBills").textContent = fmt(v.myBills);
+    $("hsDaily").textContent = fmt(v.mySpent);
+    const pool = Math.max(1, v.left + v.mySpent);
+    const used = Math.min(100, Math.max(0, v.left < 0 ? 100 : v.mySpent / pool * 100));
     $("heroRing").style.strokeDashoffset = future ? 100 : (100 - used).toFixed(1);
     $("heroRing").classList.toggle("over", v.left < 0);
     $("heroPct").innerHTML = future ? `<small>ainda não começou</small>` : v.left < 0 ? `!<small>passou</small>` : `${Math.round(used)}%<small>gasto</small>`;
     $("heroSub").textContent = (v.planLeft ? `Já separando ${kfmt(v.planLeft)} para guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia` : "");
 
     // entra
-    const lineEdit = (i, ym, txt, meta) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${txt}</div>${meta ? `<div class="meta">${meta}</div>` : ""}</div><span class="val num">${fmt(i.amount)}</span></div>`;
+    // valor mostrado = sua parte; quando dividido, a meta lembra o valor inteiro
+    const whole = (i) => i.renan ? `conta toda ${fmt(i.amount)}` : "";
+    const lineEdit = (i, ym, txt, meta) => { const m = [meta, whole(i)].filter(Boolean).join(" · "); return `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${txt}</div>${m ? `<div class="meta">${m}</div>` : ""}</div><span class="val num">${fmt(i.amount - (i.renan || 0))}</span></div>`; };
     let h = v.income.map(i => lineEdit(i, v.M, `${esc(i.desc)} ${ddmm(v.payday)}`, "")).join("");
     if (!v.income.length) h += `<p class="empty">Nenhum salário lançado para ${ddmm(v.payday)}.</p>`;
-    if (v.renan) {
-      const open = state.open.renan;
-      const parts = [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0]), ...v.daily].filter(i => i.renan);
-      h += `<div class="line nocheck tap renan" data-toggle="renan"><div><div class="name">${esc(P())} te passa</div><div class="meta">${open ? "fechar" : "ver de quê"}</div></div><span class="val num">${fmt(v.renan)}</span></div>` +
-        (open ? `<div class="sublist">${parts.map(i => `<div class="line nocheck"><span class="name">${esc(i.desc)}</span><span class="val num">${fmt(i.renan)}</span></div>`).join("")}</div>` : "");
-    }
     $("listIn").innerHTML = h;
-    $("totIn").textContent = fmt(v.totIn + v.renan);
+    $("totIn").textContent = fmt(v.totIn);
 
     // contas do dia do salário
     $("hBills").textContent = `Contas do dia ${ddmm(v.payday)}`;
@@ -1009,14 +1008,14 @@ html.privacy .story-card .v { filter: blur(10px); }
       const list = v.cards[m], paid = list.filter(i => i.paid).length, st = paid === list.length ? "true" : paid ? "mixed" : "false";
       const open = state.open["card:" + m];
       return `<div class="line${st === "true" ? " done" : ""}">${tick(st, `data-card="${esc(m)}"`, cardName(m) + " paga")}
-          <div class="tap" data-toggle="card:${esc(m)}"><div class="name">${badge(m)}${cardName(m)}</div><div class="meta">${list.length} ${list.length === 1 ? "compra" : "compras"} · ${open ? "fechar" : "ver compras"}</div></div>
-          <span class="val num">${fmt(full(list))}</span></div>` +
+          <div class="tap" data-toggle="card:${esc(m)}"><div class="name">${badge(m)}${cardName(m)}</div><div class="meta">${list.length} ${list.length === 1 ? "compra" : "compras"}${renanOf(list) ? ` · fatura toda ${fmt(full(list))}` : ""} · ${open ? "fechar" : "ver compras"}</div></div>
+          <span class="val num">${fmt(full(list) - renanOf(list))}</span></div>` +
         (open ? `<div class="sublist">${list.slice().sort((a, b) => b.amount - a.amount).map(i => lineEdit(i, v.M, esc(i.desc) + (i.inst ? ` (${esc(i.inst)})` : ""), i.day ? `${pad(i.day)}/${(i.pm || v.M).slice(5)}` : "")).join("")}</div>` : "");
     }).join("");
     h += v.bills.map(([i, ym]) => `<div class="line${i.paid ? " done" : ""}">${tick(String(!!i.paid), `data-paid="${ym}|${i.id}"`, i.desc + " paga")}
-        <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${esc(i.desc)}</div>${i.renan ? `<div class="meta">${esc(P())} ${fmt(i.renan)}</div>` : ""}</div><span class="val num">${fmt(i.amount)}</span></div>`).join("");
+        <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${esc(i.desc)}</div>${i.renan ? `<div class="meta">conta toda ${fmt(i.amount)} · ${esc(P())} ${fmt(i.renan)}</div>` : ""}</div><span class="val num">${fmt(i.amount - (i.renan || 0))}</span></div>`).join("");
     $("listBills").innerHTML = h || `<p class="empty">Nada lançado para pagar em ${ddmm(v.payday)}.</p>`;
-    $("totBills").textContent = fmt(v.totBills);
+    $("totBills").textContent = fmt(v.myBills);
 
     // gastos do mês
     const dd = v.daily.slice().sort((a, b) => (a.day || 0) - (b.day || 0));
@@ -1024,7 +1023,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       const pm = i.pm || v.N, when = i.day ? new Date(+pm.slice(0, 4), +pm.slice(5) - 1, i.day) : null;
       return lineEdit(i, v.N, esc(i.desc), when ? `${ddmm(when)}${when > t0 ? " · previsto" : ""}` : "");
     }).join("") || `<p class="empty">Nenhum gasto ainda. Toque em + Lançar.</p>`;
-    $("totDaily").textContent = fmt(v.spent);
+    $("totDaily").textContent = fmt(v.mySpent);
 
     $("descs").innerHTML = [...new Set(allItems().map(i => i.desc))].sort().map(d => `<option value="${esc(d)}">`).join("");
     renderRenan();
@@ -1145,16 +1144,16 @@ html.privacy .story-card .v { filter: blur(10px); }
   const kfmt = (c) => fmt(c).replace(/,\d\d$/, "");
   function renderTiles(v) {
     // entra: valor do mês e a linha dos últimos 6 meses
-    $("tIn").textContent = kfmt(v.totIn + v.renan);
-    $("tInSub").textContent = hasPartner() && v.renan ? `salário + ${P()}` : `${v.income.length} ${v.income.length === 1 ? "entrada" : "entradas"}`;
-    const hist = Array.from({ length: 6 }, (_, k) => { const w = monthView(shiftMonth(v.N, k - 5)); return w.totIn + w.renan; }), hmax = Math.max(1, ...hist);
+    $("tIn").textContent = kfmt(v.totIn);
+    $("tInSub").textContent = `${v.income.length} ${v.income.length === 1 ? "entrada" : "entradas"}`;
+    const hist = Array.from({ length: 6 }, (_, k) => monthView(shiftMonth(v.N, k - 5)).totIn), hmax = Math.max(1, ...hist);
     $("tInSpark").innerHTML = `<polyline points="${hist.map((x, k) => `${k * 24},${(26 - x / hmax * 22).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--in)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
     // contas do dia: quantas já foram pagas
-    const groups = [...Object.values(v.cards).map(l => ({ amt: full(l), paid: l.every(i => i.paid) })), ...v.bills.map(([i]) => ({ amt: i.amount, paid: !!i.paid }))];
+    const groups = [...Object.values(v.cards).map(l => ({ amt: full(l) - renanOf(l), paid: l.every(i => i.paid) })), ...v.bills.map(([i]) => ({ amt: i.amount - (i.renan || 0), paid: !!i.paid }))];
     const np = groups.filter(g => g.paid).length, ap = groups.filter(g => g.paid).reduce((a, g) => a + g.amt, 0);
-    $("tBillsK").textContent = `Contas ${ddmm(v.payday)}`; $("tBills").textContent = kfmt(v.totBills);
+    $("tBillsK").textContent = `Contas ${ddmm(v.payday)}`; $("tBills").textContent = kfmt(v.myBills);
     $("tBillsSub").textContent = groups.length ? `${np} de ${groups.length} pagas` : "nada lançado";
-    $("tBillsBar").style.width = `${v.totBills ? ap / v.totBills * 100 : 0}%`;
+    $("tBillsBar").style.width = `${v.myBills ? ap / v.myBills * 100 : 0}%`;
     // onde você gasta: rosca com as maiores categorias (sua parte)
     const all = [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0]), ...v.daily], by = {};
     all.forEach(i => { const c = i.cat || "Outros", x = Math.max(0, i.amount - (i.renan || 0)); by[c] = (by[c] || 0) + x; });
@@ -1184,9 +1183,9 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("tPlanSub").textContent = v.plan ? (savedM >= v.plan ? `guardado ✓ ${kfmt(savedM)}` : `guardou ${kfmt(savedM)} · falta ${kfmt(v.plan - savedM)}`) : "toque para escolher um valor";
     $("tPlanBar").style.width = `${v.plan ? Math.min(100, savedM / v.plan * 100) : 0}%`;
     // débito e PIX: barras por dia
-    $("tDaily").textContent = kfmt(v.spent);
+    $("tDaily").textContent = kfmt(v.mySpent);
     $("tDailySub").textContent = `${v.daily.length} ${v.daily.length === 1 ? "gasto" : "gastos"}`;
-    const byDay = {}; v.daily.forEach(i => { const k = isoOf(itemDate(i, v.N)); byDay[k] = (byDay[k] || 0) + i.amount; });
+    const byDay = {}; v.daily.forEach(i => { const k = isoOf(itemDate(i, v.N)); byDay[k] = (byDay[k] || 0) + i.amount - (i.renan || 0); });
     const dv = Object.keys(byDay).sort().slice(-12).map(k => byDay[k]), dmax = Math.max(1, ...dv);
     $("tDailyBars").innerHTML = dv.map((x, k) => `<i style="height:${Math.max(8, x / dmax * 100)}%;animation-delay:${k * 0.04}s"></i>`).join("");
   }
@@ -1328,7 +1327,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   function overview(N0) {
     return Array.from({ length: 12 }, (_, k) => {
       const v = monthView(shiftMonth(N0, k)), taken = full(v.taken), saved = full(v.saved);
-      return { N: v.N, M: v.M, entra: v.totIn + v.renan + taken, gasta: v.totBills + v.spent, saved, planLeft: v.planLeft, savePlan: v.plan, sobra: v.left, noIncome: !v.income.length };
+      return { N: v.N, M: v.M, entra: v.totIn + taken, gasta: v.myBills + v.mySpent, saved, planLeft: v.planLeft, savePlan: v.plan, sobra: v.left, noIncome: !v.income.length };
     });
   }
   // ---------- anos: resumo de cada ano (meses de janeiro a dezembro, como na aba Mês), comparação e arquivo ----------
@@ -1505,7 +1504,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       $("yFix2List").innerHTML = list.map(([k, { i, n }]) => `<div class="fixrow"><span><b>${esc(i.desc)}</b><small>${fmt(i.amount)} · falta em ${n} ${n === 1 ? "mês" : "meses"}</small></span>
         <span class="row"><button class="btn small primary" type="button" data-fix-yes="${esc(k)}">Incluir</button><button class="btn small" type="button" data-fix-no="${esc(k)}">Não</button></span></div>`).join("");
     }
-    $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" inclui a parte de ${P()}; "Gasta" conta o valor cheio das contas e dos gastos do mês. Em "Guardei", em cima está o que você guardou de verdade (botão Guardar da Reserva) e embaixo o previsto pela sugestão de ${pct}% da sobra; o número com → embaixo da sobra é quanto fica se você guardar a sugestão. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
+    $("yNote").textContent = `Os valores são os mesmos da aba Mês: só o que está lançado. "Entra" é o que entrou para você e "Gasta" é só a sua parte das contas e dos gastos; o que é de ${P()} fica no acerto. Em "Guardei", em cima está o que você guardou de verdade (botão Guardar da Reserva) e embaixo o previsto pela sugestão de ${pct}% da sobra; o número com → embaixo da sobra é quanto fica se você guardar a sugestão. Para os meses futuros ficarem completos, use "Repetir por quantos meses" nas contas e entradas.`;
   }
   // uma a uma: "Incluir" repete aquela conta nos meses que faltam; "Não" para de perguntar sobre ela
   $("yFix2List").addEventListener("click", async (e) => {
@@ -2009,7 +2008,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     let renanY = 0; for (let k = 1; k <= 12; k++) itemsOf(`${Y}-${pad(k)}`).forEach(i => { renanY += i.renan || 0; });
     const nItems = Array.from({ length: 12 }, (_, k) => itemsOf(`${Y}-${pad(k + 1)}`).length).reduce((a, b) => a + b, 0);
     cards.push({ e: "✨", k: `Seu ${Y}`, v: String(Y), t: `${nItems} lançamentos. Vamos ver como foi o seu ano?` });
-    cards.push({ e: "💰", k: "Entrou", v: fmt0(d.entra), t: hasPartner() ? `Somando salário, a parte de ${P()} e o resto.` : "Somando salário e tudo o que entrou." });
+    cards.push({ e: "💰", k: "Entrou", v: fmt0(d.entra), t: "Somando salário e tudo o que entrou para você." });
     cards.push({ e: "🧾", k: "Você gastou", v: fmt0(d.gasta), t: top ? `A categoria campeã foi <b>${esc(top[0])}</b>, com ${fmt0(top[1])}.` : "" });
     if (renanY) cards.push({ e: "🤝", k: `Dividido com ${P()}`, v: fmt0(renanY), t: "Foi a parte da outra pessoa nas contas e compras do ano." });
     cards.push({ e: "🐷", k: "Você guardou", v: fmt0(d.saved), t: d.saved ? "Cada real guardado rende na caixinha. Continue assim!" : "Que tal começar a guardar um pouquinho por mês?" });

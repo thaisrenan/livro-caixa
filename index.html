@@ -236,7 +236,15 @@ details.how p, details.how small { display: block; margin: 4px 0 0; }
 .cat-top span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cat-top .num { font-weight: 600; white-space: nowrap; }
 .cat-top small { color: var(--muted); font-weight: 500; margin-left: 4px; }
-.sublist.fatura .name { flex-wrap: nowrap; gap: 10px; }
+.line.frow { grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; padding: 10px 0; }
+.frow .fdesc { display: grid; justify-items: start; gap: 3px; min-width: 0; }
+.frow .name { font-weight: 500; font-size: var(--fs-md); }
+.frow .name small { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); margin-left: 4px; }
+.fpill { font-size: 0.6875rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; color: var(--renan); background: var(--renan-soft); }
+.fpill.all { color: var(--muted); background: var(--sheet-2); }
+.frow .fval { display: grid; justify-items: end; gap: 1px; }
+.frow .fval small { font-size: var(--fs-xs); color: var(--muted); }
+.frow .val.zero { color: var(--muted); font-weight: 500; }
 .dchip { flex: none; display: grid; justify-items: center; width: 38px; padding: 3px 0; border-radius: 8px; background: var(--sheet-2); border: 1px solid var(--rule); font-size: 0.625rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); line-height: 1.1; }
 .dchip b { font-size: var(--fs-md); color: var(--ink); letter-spacing: 0; }
 .dchip.none { padding: 8px 0; font-size: 0.5625rem; }
@@ -1047,7 +1055,10 @@ html.privacy .story-card .v { filter: blur(10px); }
         (open ? `<div class="sublist fatura">${list.slice().sort((a, b) => (a.day ? itemDate(a, v.M) : 9e15) - (b.day ? itemDate(b, v.M) : 9e15)).map(i => {
           // fatura em ordem de data, como no extrato do banco; a data fica numa etiqueta à esquerda
           const d = i.day ? itemDate(i, v.M) : null, tag = d ? `<span class="dchip"><b>${pad(d.getDate())}</b>${MES3[d.getMonth()]}</span>` : `<span class="dchip none">${i.inst ? "parc." : "mensal"}</span>`;
-          return lineEdit(i, v.M, tag + `<span>${esc(i.desc)}${i.inst ? ` <small>(${esc(i.inst)})</small>` : ""}</span>`, "");
+          const mine = i.amount - (i.renan || 0), split = i.renan ? (i.renan >= i.amount ? `tudo de ${P()}` : i.renan * 2 === i.amount || Math.abs(i.renan * 2 - i.amount) <= 1 ? `metade com ${P()}` : `parte com ${P()}`) : "";
+          return `<div class="line nocheck tap frow" data-edit="${v.M}|${i.id}">${tag}
+            <div class="fdesc"><div class="name">${esc(i.desc)}${i.inst ? ` <small>${esc(i.inst)}</small>` : ""}</div>${split ? `<span class="fpill${mine ? "" : " all"}">${esc(split)}</span>` : ""}</div>
+            <div class="fval"><span class="val num${mine ? "" : " zero"}">${fmt(mine)}</span>${i.renan ? `<small class="num">de ${fmt(i.amount)}</small>` : ""}</div></div>`;
         }).join("")}</div>` : "");
     }).join("");
     h += v.bills.map(([i, ym]) => `<div class="line${i.paid ? " done" : ""}">${tick(String(!!i.paid), `data-paid="${ym}|${i.id}"`, i.desc + " paga")}

@@ -236,6 +236,10 @@ details.how p, details.how small { display: block; margin: 4px 0 0; }
 .cat-top span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cat-top .num { font-weight: 600; white-space: nowrap; }
 .cat-top small { color: var(--muted); font-weight: 500; margin-left: 4px; }
+.sublist.fatura .name { flex-wrap: nowrap; gap: 10px; }
+.dchip { flex: none; display: grid; justify-items: center; width: 38px; padding: 3px 0; border-radius: 8px; background: var(--sheet-2); border: 1px solid var(--rule); font-size: 0.625rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); line-height: 1.1; }
+.dchip b { font-size: var(--fs-md); color: var(--ink); letter-spacing: 0; }
+.dchip.none { padding: 8px 0; font-size: 0.5625rem; }
 .catsrc { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 12px; }
 .catsrc button { display: grid; gap: 1px; padding: 6px 4px; font-size: var(--fs-xs); }
 .catsrc button b { font-size: var(--fs-sm); color: var(--ink); }
@@ -900,6 +904,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     const v = Number(s);
     return Number.isFinite(v) ? Math.round(v * 100) : NaN;
   };
+  const MES3 = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
   const toInput = (c) => (c / 100).toFixed(2).replace(".", ",");
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const shiftMonth = (ym, d) => { const [y, m] = ym.split("-").map(Number); const t = new Date(y, m - 1 + d, 1); return `${t.getFullYear()}-${pad(t.getMonth() + 1)}`; };
@@ -1039,7 +1044,11 @@ html.privacy .story-card .v { filter: blur(10px); }
       return `<div class="line${st === "true" ? " done" : ""}">${tick(st, `data-card="${esc(m)}"`, cardName(m) + " paga")}
           <div class="tap" data-toggle="card:${esc(m)}"><div class="name">${badge(m)}${cardName(m)}</div><div class="meta">${list.length} ${list.length === 1 ? "compra" : "compras"}${renanOf(list) ? ` · fatura toda ${fmt(full(list))}` : ""} · ${open ? "fechar" : "ver compras"}</div></div>
           <span class="val num">${fmt(full(list) - renanOf(list))}</span></div>` +
-        (open ? `<div class="sublist">${list.slice().sort((a, b) => b.amount - a.amount).map(i => lineEdit(i, v.M, esc(i.desc) + (i.inst ? ` (${esc(i.inst)})` : ""), i.day ? `${pad(i.day)}/${(i.pm || v.M).slice(5)}` : "")).join("")}</div>` : "");
+        (open ? `<div class="sublist fatura">${list.slice().sort((a, b) => (a.day ? itemDate(a, v.M) : 9e15) - (b.day ? itemDate(b, v.M) : 9e15)).map(i => {
+          // fatura em ordem de data, como no extrato do banco; a data fica numa etiqueta à esquerda
+          const d = i.day ? itemDate(i, v.M) : null, tag = d ? `<span class="dchip"><b>${pad(d.getDate())}</b>${MES3[d.getMonth()]}</span>` : `<span class="dchip none">${i.inst ? "parc." : "mensal"}</span>`;
+          return lineEdit(i, v.M, tag + `<span>${esc(i.desc)}${i.inst ? ` <small>(${esc(i.inst)})</small>` : ""}</span>`, "");
+        }).join("")}</div>` : "");
     }).join("");
     h += v.bills.map(([i, ym]) => `<div class="line${i.paid ? " done" : ""}">${tick(String(!!i.paid), `data-paid="${ym}|${i.id}"`, i.desc + " paga")}
         <div class="tap" data-edit="${ym}|${i.id}"><div class="name">${esc(i.desc)}</div>${i.renan ? `<div class="meta">conta toda ${fmt(i.amount)} · ${esc(P())} ${fmt(i.renan)}</div>` : ""}</div><span class="val num">${fmt(i.amount - (i.renan || 0))}</span></div>`).join("");

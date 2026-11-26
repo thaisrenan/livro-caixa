@@ -635,6 +635,13 @@ html.privacy .story-card .v { filter: blur(10px); }
   .bento > #hero { grid-row: span 2; align-content: center; }
   .bento > #hero .ring { width: 150px; }
   #tPlanTile { order: 1; } .bento > [data-open="hRes"] { order: 2; } #tCatsTile { order: 3; } #tDailyTile { order: 4; }
+  /* Planejar: diagnóstico e limites lado a lado, planos em faixa, formulário ao lado da recomendação */
+  #viewPlan { display: grid; columns: auto; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "diag lim" "plans plans" "form res"; gap: 18px; align-items: start; }
+  #viewPlan > * { margin: 0; }
+  #viewPlan .pl-diag { grid-area: diag; } #viewPlan .pl-lim { grid-area: lim; } #viewPlan .pl-plans { grid-area: plans; }
+  #viewPlan .pl-form { grid-area: form; position: sticky; top: 16px; } #viewPlan .pl-res { grid-area: res; }
+  #myPlans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 14px; }
+  #myPlans .mp-h, #myPlans .mp-empty { grid-column: 1 / -1; }
   /* listas completas visíveis, em duas colunas */
   html #details[hidden] { display: block !important; columns: 2; column-gap: 16px; margin-top: 22px; }
   #details > section { break-inside: avoid; margin-bottom: 16px; }
@@ -708,11 +715,15 @@ html.privacy .story-card .v { filter: blur(10px); }
   </div>
 
   <div id="viewPlan" class="stack" hidden>
-    <section class="block" aria-labelledby="hDiag">
+    <section class="block pl-diag" aria-labelledby="hDiag">
       <div class="block-head"><h2 id="hDiag">Seu diagnóstico</h2><span class="tot num" id="diagScore"></span></div>
       <div id="diagBox"></div>
     </section>
-    <section class="block" aria-labelledby="hPlanForm">
+    <section class="block myplans pl-plans" aria-labelledby="hMyPlans">
+      <div class="block-head"><h2 id="hMyPlans">Meus planos</h2><span class="tot num" id="mpTot"></span></div>
+      <div id="myPlans"></div>
+    </section>
+    <section class="block pl-form" aria-labelledby="hPlanForm">
       <div class="block-head"><h2 id="hPlanForm">O que você quer comprar?</h2></div>
       <div class="plan-form">
         <label class="field"><span>O que é</span><input id="plDesc" class="lock-text" placeholder="Ex.: Celular novo" autocomplete="off"></label>
@@ -735,17 +746,13 @@ html.privacy .story-card .v { filter: blur(10px); }
         <button class="btn primary" id="plGo" type="button">Analisar</button>
       </div>
     </section>
-    <section class="block" aria-labelledby="hPlanRes" id="planRes" hidden>
+    <section class="block pl-res" aria-labelledby="hPlanRes" id="planRes">
       <div class="block-head"><h2 id="hPlanRes">Recomendação</h2></div>
-      <div id="planOut"></div>
+      <div id="planOut"><div class="mp-empty"><span>💡</span><p>Preencha o que você quer comprar e toque em <b>Analisar</b>. A recomendação aparece aqui, com entrada, parcelas e o que evitar.</p></div></div>
     </section>
-    <section class="block" aria-labelledby="hLimits">
+    <section class="block pl-lim" aria-labelledby="hLimits">
       <div class="block-head"><h2 id="hLimits">Limite dos cartões</h2></div>
       <div id="limitsBox"></div>
-    </section>
-    <section class="block myplans" aria-labelledby="hMyPlans">
-      <div class="block-head"><h2 id="hMyPlans">Meus planos</h2><span class="tot num" id="mpTot"></span></div>
-      <div id="myPlans"></div>
     </section>
   </div>
 

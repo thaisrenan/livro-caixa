@@ -371,7 +371,9 @@ button.tile:not(.w2)::after { content: "›"; position: absolute; top: 10px; rig
 #tPartnerTile[hidden] ~ #tDailyTile { grid-column: span 2; }
 .fabtxt { display: none; }
 .endnote { width: 100%; margin-top: 12px; display: flex; align-items: center; gap: 12px; text-align: left; padding: 13px 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--in) 35%, var(--rule)); background: linear-gradient(135deg, var(--in-soft), var(--sheet) 80%); color: var(--ink); font: inherit; font-size: var(--fs-md); line-height: 1.4; animation: up .5s var(--ease) .3s both; }
-.endnote .en-ic { font-size: 1.3rem; }
+.endnote .en-ic, .banknote .en-ic { font-size: 1.3rem; }
+.banknote { margin-top: 12px; display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 16px; border: 1px solid var(--tint-violet-line); background: linear-gradient(135deg, var(--accent-soft), var(--sheet) 80%); font-size: var(--fs-sm); line-height: 1.45; }
+.banknote .icon-btn { flex: none; }
 .endnote .en-go { margin-left: auto; color: var(--muted); font-size: 1.2rem; }
 .swipe-hint { text-align: center; font-size: var(--fs-xs); margin: 14px 0 0; opacity: .7; }
 #viewMonth.go-next .bento { animation: from-right .35s var(--ease); } #viewMonth.go-prev .bento { animation: from-left .35s var(--ease); }
@@ -505,12 +507,28 @@ dialog.ask .rep { text-align: center; }
 .fixrow > span:first-child { display: grid; min-width: 0; }
 .fixrow small { color: var(--muted); font-size: var(--fs-xs); }
 .fixrow .row { flex-wrap: nowrap; }
+/* conferir fatura */
+.rc-sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rc-sum > div { background: var(--sheet-2); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
+.rc-sum span { font-size: var(--fs-xs); color: var(--muted); }
+.rc-sum b { font-size: 1.1rem; }
+.rc-ok { padding: 14px; border-radius: 14px; background: var(--in-soft); color: var(--in); font-weight: 600; text-align: center; }
+.rc-diff { padding: 10px 12px; border-radius: 12px; background: var(--out-soft); color: var(--out); font-weight: 600; font-size: var(--fs-md); }
+.rc-sec h3 { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 6px 0 4px; }
+.rc-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.rc-row:last-child { border-bottom: 0; }
+.rc-row .name { font-weight: 500; font-size: var(--fs-md); overflow-wrap: anywhere; }
+.rc-row .meta { font-size: var(--fs-xs); color: var(--muted); }
+.rc-row .val { font-weight: 600; white-space: nowrap; text-align: right; }
+.rc-row .row { grid-column: 2 / -1; }
+.rc-sec details summary { cursor: pointer; font-size: var(--fs-sm); color: var(--muted); font-weight: 600; padding: 6px 0; }
 /* perfil */
 .pf-cards { display: grid; gap: 8px; }
 .pf-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; background: var(--sheet-2); border-radius: 12px; padding: 8px 10px; }
 .pf-card .bk { margin: 0; }
 .pf-card .lock-text { padding: 8px 10px; }
 .pf-card label { display: grid; font-size: var(--fs-xs); color: var(--muted); text-align: center; gap: 2px; }
+.pf-card label small { font-size: 0.625rem; }
 .pf-card label input { width: 3em; padding: 6px; border: 1px solid var(--rule); border-radius: 8px; background: var(--sheet); text-align: center; }
 .pf-card .pf-own { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; text-align: left; font-size: var(--fs-sm); color: var(--ink); }
 .pf-card .pf-own input { width: 18px; height: 18px; padding: 0; flex: none; accent-color: var(--accent); }
@@ -680,6 +698,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   <button type="button" class="tile" id="tDailyTile" data-open="hDaily"><span class="tk">Débito e PIX</span><b class="tv num" id="tDaily">—</b><small id="tDailySub"></small><span class="tbars" id="tDailyBars"></span></button>
   </div>
   <button type="button" class="endnote" id="endNote" hidden></button>
+  <div class="banknote" id="bankNote" hidden></div>
   <p class="hint swipe-hint">Arraste para o lado para trocar de mês</p>
   <div id="details" hidden>
 
@@ -691,6 +710,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   <section class="block" aria-labelledby="hBills">
     <div class="block-head"><h2 id="hBills">Contas do dia</h2><span class="tot num" id="totBills"></span></div>
     <div id="listBills"></div>
+    <div class="row" style="padding:6px 0 10px"><button class="btn" id="reconBtn" type="button">📄 Conferir fatura com o PDF</button><input type="file" id="reconFile" accept="application/pdf,.pdf"></div>
   </section>
 
   <section class="block" aria-labelledby="hDaily">
@@ -732,6 +752,13 @@ html.privacy .story-card .v { filter: blur(10px); }
   </div>
 
   <div id="viewPartner" class="stack" hidden>
+  <section class="block invite" id="inviteBox">
+    <div class="block-head"><h2 id="hInvite">Conta própria para quem divide</h2></div>
+    <div class="renan-box">
+      <span class="hint" id="inviteText"></span>
+      <div class="row"><button class="btn" id="inviteCopy" type="button">Copiar convite</button></div>
+    </div>
+  </section>
   <section class="block" aria-labelledby="hRenan">
     <div class="block-head"><h2 id="hRenan">Acerto da divisão</h2></div>
     <div class="renan-box">
@@ -852,6 +879,13 @@ html.privacy .story-card .v { filter: blur(10px); }
   </div>
 </dialog>
 
+<dialog id="reconDlg" class="box" aria-labelledby="rcTitle">
+  <div class="rep">
+    <div class="panel-head"><h2 id="rcTitle">Conferir fatura</h2><button class="icon-btn" id="rcClose" type="button">Fechar</button></div>
+    <div id="rcBody"></div>
+  </div>
+</dialog>
+
 <dialog id="planDlg" class="box ask" aria-labelledby="planTitle">
   <div class="rep">
     <h2 id="planTitle">Quanto quer guardar neste mês?</h2>
@@ -929,7 +963,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   // ---------- perfil de cada conta: dia do salário, cartões e com quem divide ----------
   // contas antigas (sem perfil salvo) seguem a rotina original: salário no último dia útil, Itaú, Mercado Pago e cartão do Renan
   const LEGACY = { name: "", payday: { type: "lastBiz" }, partner: "Renan", debit: "Débito Thais", cards: [
-    { id: "itau", name: "Itaú", method: "Crédito Thais Itaú", closing: 25, color: "#ec7000", tag: "itaú", alias: "ita[uú]" },
+    { id: "itau", name: "Itaú", method: "Crédito Thais Itaú", closing: 25, due: 1, closeBefore: 8, color: "#ec7000", tag: "itaú", alias: "ita[uú]" },
     { id: "mp", name: "Mercado Pago", method: "Crédito Thais Mercado Pago", closing: 25, color: "#009ee3", tag: "mp", alias: "mercado ?pago" },
     { id: "renan", name: "Renan", label: "Cartão do Renan", method: "Crédito Renan", closing: 25, color: "#5f6a76", tag: "R", partner: true, alias: "renan" }] };
   const profile = () => state.settings.profile || LEGACY;
@@ -1027,7 +1061,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("heroRing").style.strokeDashoffset = future ? 100 : (100 - used).toFixed(1);
     $("heroRing").classList.toggle("over", v.left < 0);
     $("heroPct").innerHTML = future ? `<small>ainda não começou</small>` : v.left < 0 ? `!<small>passou</small>` : `${Math.round(used)}%<small>gasto</small>`;
-    $("heroSub").textContent = (v.planLeft ? `Já tirei ${kfmt(v.planLeft)} para guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia` : "");
+    $("heroSub").textContent = (v.planLeft ? `Já tirei ${kfmt(v.planLeft)} para guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia · ${fmt(Math.floor(v.left / daysLeft * 7))} por semana, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia · ${fmt(Math.floor(v.left / daysLeft * 7))} por semana` : "");
 
     // entra
     // linha com etiqueta de data, divisão e valor inteiro (fatura e débito/PIX)
@@ -1084,6 +1118,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     renderCats(v);
     renderTiles(v);
     renderEndNote(v);
+    renderBankNote(); renderInvite();
   }
 
   // ---------- acerto com o Renan: só o que você já pagou ----------
@@ -1275,6 +1310,29 @@ html.privacy .story-card .v { filter: blur(10px); }
   }
   const mName = (ym) => monthOnly(ym) + (ym.slice(0, 4) !== String(today0().getFullYear()) ? ` de ${ym.slice(0, 4)}` : "");
   const endText = (e) => `Em ${mName(e.last)} ${e.items.length === 1 ? `acaba a última parcela de ${e.items[0].desc}` : `acabam ${e.items.length} parcelas`}, e sua sobra aumenta ${kfmt(e.total)} a partir de ${monthOnly(e.free)}.`;
+  // bancos cuja fatura em PDF ainda não foi testada: aviso para mandar um exemplo
+  const TESTED_BANKS = /ita[uú]/i;
+  function renderBankNote() {
+    const pend = cardsList().filter(c => !c.partner && !TESTED_BANKS.test(c.name + " " + (c.alias || ""))).map(c => c.name);
+    let seen = []; try { seen = JSON.parse(localStorage.getItem("lc:bankNoteOk")) || []; } catch (e) {}
+    const show = pend.filter(n => !seen.includes(n));
+    $("bankNote").hidden = !show.length;
+    if (show.length) $("bankNote").innerHTML = `<span class="en-ic">📄</span><span>Para o app conferir sozinho a fatura ${show.length === 1 ? "do " + esc(show[0]) : "de " + show.map(esc).join(", ")}, ele precisa ver um exemplo antes. Quando a fatura fechar, mande o PDF para ajustarmos a leitura. Até lá, "Conferir fatura" funciona do jeito genérico e pode errar.</span><button type="button" class="icon-btn" id="bankNoteOk">Ok</button>`;
+  }
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#bankNoteOk")) return;
+    const names = cardsList().map(c => c.name); try { localStorage.setItem("lc:bankNoteOk", JSON.stringify(names)); } catch (err) {} renderBankNote();
+  });
+  function renderInvite() {
+    const n = P(), url = location.origin + location.pathname;
+    $("hInvite").textContent = `${n} também pode usar o Finance`;
+    $("inviteText").textContent = `${n} pode ter a conta própria, com os bancos dele: abrir ${url} no celular, tocar em "Começar do zero" e, no assistente, informar os cartões, o dia de vencimento e quanto tempo antes cada fatura fecha. Depois é só mandar um PDF de fatura de cada banco para o app aprender a conferir. Os dados de cada um ficam separados.`;
+  }
+  $("inviteCopy").addEventListener("click", () => {
+    const url = location.origin + location.pathname;
+    const text = `Oi! Usa o Finance comigo pra organizar as contas 😊\n1. Abre ${url} no celular\n2. Toca em "Começar do zero" e cria um PIN\n3. No assistente, coloca seus cartões, o dia que vence e quantos dias antes cada fatura fecha\n4. Quando a fatura fechar, me manda o PDF de cada banco pra gente ajustar a conferência automática`;
+    navigator.clipboard.writeText(text).then(() => toast("Convite copiado. É só colar no WhatsApp."), () => toast("Não consegui copiar."));
+  });
   function renderEndNote(v) {
     const e = endingInstallments(v.N)[0];
     $("endNote").hidden = !e;
@@ -1289,6 +1347,119 @@ html.privacy .story-card .v { filter: blur(10px); }
       <div class="meta">${e.items.map(x => `${esc(x.desc)} (${x.n}x)`).join(", ")}</div></div><span class="val num" style="color:var(--in)">+ ${kfmt(e.total)}</span></div>`).join("") +
       `<p class="hint" style="padding:6px 0 12px">A partir do mês seguinte à última parcela, esse valor deixa de sair e a sua sobra aumenta. Só a sua parte.</p>`;
   }
+
+  // ---------- conferir a fatura com o PDF do banco (lido no próprio aparelho, nada é enviado) ----------
+  function parseFatura(pages) {
+    const DATE = /^\d{2}\/\d{2}$/, MONEY = /^-?\d{1,3}(\.\d{3})*,\d{2}$/, out = [];
+    for (const items of pages) {
+      const rows = [];
+      items.filter(t => t.str.trim()).sort((a, b) => b.y - a.y || a.x - b.x).forEach(t => {
+        const r = rows.find(r => Math.abs(r.y - t.y) < 2.5); if (r) r.items.push(t); else rows.push({ y: t.y, items: [t] });
+      });
+      for (const r of rows) {
+        // numa mesma linha podem estar duas colunas: data · estabelecimento · valor, uma depois da outra
+        const toks = r.items.sort((a, b) => a.x - b.x).flatMap(t => t.str.trim().split(/\s{2,}/).map(x => x.trim()));
+        let cur = null;
+        for (const t of toks) {
+          if (!cur) { if (DATE.test(t)) cur = { date: t, desc: [] }; continue; }
+          if (MONEY.test(t)) { const v = Math.round(parseFloat(t.replace(/\./g, "").replace(",", ".")) * 100); if (v > 0 && cur.desc.length) out.push({ date: cur.date, desc: cur.desc.join(" ").replace(/\s+/g, " ").trim(), amount: v }); cur = null; continue; }
+          cur.desc.push(t);
+        }
+      }
+    }
+    return out;
+  }
+  async function readPdf(file) {
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise, pages = [];
+    let text = "";
+    for (let n = 1; n <= doc.numPages; n++) {
+      const c = await (await doc.getPage(n)).getTextContent();
+      pages.push(c.items.map(i => ({ str: i.str, x: i.transform[4], y: i.transform[5] })));
+      text += " " + c.items.map(i => i.str).join(" ");
+    }
+    return { lines: parseFatura(pages), text };
+  }
+  let recon = null;
+  $("reconBtn").addEventListener("click", () => $("reconFile").click());
+  $("reconFile").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+    $("rcBody").innerHTML = `<p class="hint">Lendo a fatura…</p>`; $("reconDlg").showModal();
+    try {
+      const { lines, text } = await readPdf(f);
+      if (!lines.length) { $("rcBody").innerHTML = `<p class="hint">Não encontrei compras nesse PDF. Ele é a fatura do cartão, baixada do app do banco?</p>`; return; }
+      const vm = /Vencimento:?\s*(\d{2})\/(\d{2})\/(\d{4})/i.exec(text), tm = /Total desta fatura\s*([\d.]+,\d{2})/i.exec(text);
+      const venc = vm ? new Date(+vm[3], +vm[2] - 1, +vm[1]) : today0();
+      // qual cartão: pelo nome do banco no PDF; se não achar, o primeiro
+      const low = text.toLowerCase(), cards = cardsList();
+      const card = cards.find(c => (c.alias && new RegExp(c.alias, "i").test(low)) || low.includes(c.name.toLowerCase())) || cards[0];
+      recon = { text, lines, venc, card, total: tm ? Math.round(parseFloat(tm[1].replace(/\./g, "").replace(",", ".")) * 100) : null };
+      // em que mês do app está essa fatura: o que tiver mais valores iguais
+      const vym = ymOf(venc), cand = [shiftMonth(vym, -2), shiftMonth(vym, -1), vym];
+      const score = (M) => { const pool = cardItemsOf(M, card).map(i => i.amount); return lines.filter(l => { const k = pool.indexOf(l.amount); if (k < 0) return false; pool.splice(k, 1); return true; }).length; };
+      recon.M = cand.reduce((best, M) => score(M) >= score(best) ? M : best, cand[0]);
+      renderRecon();
+    } catch (err) { $("rcBody").innerHTML = `<p class="hint">Não consegui ler esse PDF. Confira a internet (na primeira vez o app baixa o leitor de PDF) e tente de novo.</p>`; }
+  });
+  const cardItemsOf = (M, card) => card ? itemsOf(M).filter(i => (i.kind === "var" || i.kind === "fixed") && (cardOf(i.method) || {}).id === card.id) : [];
+  function lineDate(l) {
+    const [d, m] = l.date.split("/").map(Number), y = recon.venc.getFullYear() - (m > recon.venc.getMonth() + 1 ? 1 : 0);
+    return new Date(y, m - 1, d);
+  }
+  function renderRecon() {
+    const { lines, card, M } = recon, app = cardItemsOf(M, card).map(i => ({ i, d: i.day ? itemDate(i, M) : null }));
+    const pdfLeft = lines.map(l => ({ l, d: lineDate(l) })), ok = [], diff = [];
+    // 1) mesmo valor, de preferência a data mais próxima
+    for (const f of pdfLeft.slice()) {
+      const cands = app.filter(a => a.i.amount === f.l.amount).sort((a, b) => (a.d ? Math.abs(a.d - f.d) : 9e15) - (b.d ? Math.abs(b.d - f.d) : 9e15));
+      if (cands[0]) { ok.push({ f, a: cands[0] }); app.splice(app.indexOf(cands[0]), 1); pdfLeft.splice(pdfLeft.indexOf(f), 1); }
+    }
+    // 2) sobrou um de cada lado com a mesma data (até 3 dias): valor diferente
+    for (const f of pdfLeft.slice()) {
+      const words = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 4);
+      const fw = words(f.l.desc).join(" ");
+      let near = app.filter(a => words(a.i.desc).some(w => fw.includes(w)));
+      if (near.length !== 1) near = app.filter(a => a.d && Math.abs(a.d - f.d) <= 3 * 864e5);
+      if (near.length === 1) { diff.push({ f, a: near[0] }); app.splice(app.indexOf(near[0]), 1); pdfLeft.splice(pdfLeft.indexOf(f), 1); }
+    }
+    const pdfTot = lines.reduce((a, l) => a + l.amount, 0), appTot = cardItemsOf(M, card).reduce((a, i) => a + i.amount, 0);
+    const dd = (d) => d ? ddmm(d) : "sem data";
+    const row = (left, name, meta, val, actions) => `<div class="rc-row">${left}<div><div class="name">${name}</div><div class="meta">${meta}</div></div><span class="val num">${val}</span>${actions ? `<div class="row">${actions}</div>` : ""}</div>`;
+    $("rcTitle").textContent = `Fatura ${card ? card.name : ""}`;
+    const tested = card && TESTED_BANKS.test(card.name + " " + (card.alias || ""));
+    let h = (tested ? "" : `<p class="where">Primeira vez com este banco: a leitura foi feita do jeito genérico. Se algo não bater, mande o PDF de exemplo para a Thais encaminhar ao suporte do app e a leitura ser ajustada.</p>`) + `<p class="hint">Vence ${ddmm(recon.venc)} · comparada com as compras de ${card ? cardName(card.method) : "cartão"} pagas em ${ddmm(lastBizDay(M))}.</p>
+      <div class="rc-sum"><div><span>No PDF</span><b class="num">${fmt(recon.total ?? pdfTot)}</b></div><div><span>No app</span><b class="num">${fmt(appTot)}</b></div></div>`;
+    if (!app.length && !pdfLeft.length && !diff.length) h += `<div class="rc-ok">✓ Tudo bateu: ${ok.length} compras iguais.</div>`;
+    else h += `<div class="rc-diff">Diferença de ${fmt(Math.abs(appTot - (recon.total ?? pdfTot)))}. Veja abaixo o que não bateu.</div>`;
+    if (app.length) h += `<div class="rc-sec"><h3>No app, mas não na fatura (${app.length})</h3>${app.map(({ i, d }) => row(`<span class="dchip">${d ? `<b>${pad(d.getDate())}</b>${MES3[d.getMonth()]}` : "—"}</span>`, esc(i.desc) + (i.inst ? ` <small>${esc(i.inst)}</small>` : ""), "pode ter sido cobrado em outro cartão ou em outra fatura", fmt(i.amount),
+      `<button class="btn small" type="button" data-rc-edit="${i.id}">Abrir</button><button class="btn small danger" type="button" data-rc-del="${i.id}">Apagar deste mês</button>`)).join("")}</div>`;
+    if (pdfLeft.length) h += `<div class="rc-sec"><h3>Na fatura, mas falta no app (${pdfLeft.length})</h3>${pdfLeft.map(({ l, d }, k) => row(`<span class="dchip"><b>${pad(d.getDate())}</b>${MES3[d.getMonth()]}</span>`, esc(l.desc), "não achei no app", fmt(l.amount),
+      `<button class="btn small primary" type="button" data-rc-add="${lines.indexOf(l)}">Lançar no app</button>`)).join("")}</div>`;
+    if (diff.length) h += `<div class="rc-sec"><h3>Valor diferente (${diff.length})</h3>${diff.map(({ f, a }) => row(`<span class="dchip"><b>${pad(f.d.getDate())}</b>${MES3[f.d.getMonth()]}</span>`, `${esc(a.i.desc)} <small>· ${esc(f.l.desc)}</small>`, `no app ${fmt(a.i.amount)} · na fatura ${fmt(f.l.amount)}`, fmt(f.l.amount - a.i.amount),
+      `<button class="btn small primary" type="button" data-rc-fix="${a.i.id}" data-rc-val="${f.l.amount}">Usar ${fmt(f.l.amount)}</button>`)).join("")}</div>`;
+    if (ok.length) h += `<div class="rc-sec"><details><summary>Bateram (${ok.length})</summary>${ok.map(({ f, a }) => row(`<span class="dchip"><b>${pad(f.d.getDate())}</b>${MES3[f.d.getMonth()]}</span>`, esc(a.i.desc), esc(f.l.desc), fmt(f.l.amount), "")).join("")}</details></div>`;
+    $("rcBody").innerHTML = h;
+  }
+  $("rcClose").addEventListener("click", () => $("reconDlg").close());
+  $("rcBody").addEventListener("click", async (e) => {
+    if (!recon || !store) return;
+    const M = recon.M, del = e.target.closest("[data-rc-del]"), add = e.target.closest("[data-rc-add]"), fix = e.target.closest("[data-rc-fix]"), ed = e.target.closest("[data-rc-edit]");
+    if (ed) { $("reconDlg").close(); openForm(M, ed.dataset.rcEdit); return; }
+    if (del) { const it = itemsOf(M).find(i => i.id === del.dataset.rcDel); await save(M, itemsOf(M).filter(i => i.id !== del.dataset.rcDel)); toast(`${it ? it.desc : "Compra"} apagada deste mês.`); }
+    if (add) {
+      const l = recon.lines[+add.dataset.rcAdd], d = lineDate(l), ym = ymOf(d);
+      const desc = l.desc.replace(/^[A-Z0-9]{2,5}\s?\*\s?/, "").replace(/\s+/g, " ").trim();
+      await save(M, itemsOf(M).concat({ id: newId(), kind: "var", desc, amount: l.amount, method: recon.card.method, renan: 0, paid: false, inst: null, day: d.getDate(), pm: ym !== M ? ym : null, cat: window.LivroCaixaImport ? LivroCaixaImport.guessCat(desc) : "Outros" }));
+      toast(`${desc} lançado na fatura.`);
+    }
+    if (fix) {
+      const v = +fix.dataset.rcVal;
+      await save(M, itemsOf(M).map(i => i.id === fix.dataset.rcFix ? { ...i, amount: v, renan: i.renan ? Math.round(i.renan * v / i.amount) : 0 } : i));
+      toast(`Valor corrigido para ${fmt(v)}.`);
+    }
+    renderRecon();
+  });
 
   // tocar num bloco abre a lista completa numa folha que sobe
   const wide = window.matchMedia("(min-width: 1000px)");
@@ -1767,8 +1938,19 @@ html.privacy .story-card .v { filter: blur(10px); }
   };
   const closingDay = (m) => (state.settings.closing && state.settings.closing[m]) || (cardOf(m) || {}).closing || 25;
   // em que ciclo de salário entra uma compra no cartão: pelo fechamento e, se informado, pelo vencimento
+  // regra de fechamento: dia fixo, ou N dias corridos antes do vencimento (o Itaú vence dia 1 e fecha 8 dias antes)
+  const cardRule = (c) => c && (c.closeBefore ? { due: c.due, before: c.closeBefore } : /ita[uú]/i.test(c.name + " " + (c.alias || "")) && !c.fixedClose ? { due: c.due || 1, before: 8 } : null);
   function cardCycle(m, d) {
-    const c = cardOf(m), close = closingDay(m);
+    const c = cardOf(m), rule = cardRule(c);
+    if (rule && rule.due) {
+      // primeiro vencimento cujo fechamento (vencimento − N dias) ainda não passou: compra até o dia do fechamento entra nessa fatura
+      for (let k = 0; k < 3; k++) {
+        const [y, mo] = shiftMonth(ymOf(d), k).split("-").map(Number), due = new Date(y, mo - 1, Math.min(rule.due, new Date(y, mo, 0).getDate()));
+        const close = new Date(due); close.setDate(close.getDate() - rule.before);
+        if (d <= close) return salaryMonthOf(due);
+      }
+    }
+    const close = closingDay(m);
     const cy = d.getDate() > close ? shiftMonth(ymOf(d), 1) : ymOf(d);
     if (!c || !c.due) return cy;
     const [y, mo] = (c.due > close ? cy : shiftMonth(cy, 1)).split("-").map(Number);
@@ -2237,9 +2419,10 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("pfCards").innerHTML = pf.cards.length ? pf.cards.map((c, n) => `<div class="pf-card" data-n="${n}">
         <span class="bk" style="background:${esc(c.color)}">${esc(c.tag || (c.name || "?").slice(0, 2).toLowerCase())}</span>
         <input class="lock-text" data-f="name" value="${esc(c.name)}" placeholder="Nome, ex.: Nubank" aria-label="Nome do cartão">
-        <label>fecha<input data-f="closing" inputmode="numeric" maxlength="2" value="${esc(c.closing || "")}" aria-label="Dia em que a fatura fecha"></label>
+        <label>fecha${c.closeBefore ? `<input data-f="closeBefore" inputmode="numeric" maxlength="2" value="${esc(c.closeBefore)}" aria-label="Quantos dias antes do vencimento a fatura fecha"><small>dias antes</small>` : `<input data-f="closing" inputmode="numeric" maxlength="2" value="${esc(c.closing || "")}" aria-label="Dia em que a fatura fecha">`}</label>
         <label>vence<input data-f="due" inputmode="numeric" maxlength="2" value="${esc(c.due || "")}" placeholder="—" aria-label="Dia em que a fatura vence"></label>
         <button type="button" class="pf-x" data-del aria-label="Remover cartão">×</button>
+        <label class="check pf-own"><input type="checkbox" data-f="relClose" ${c.closeBefore ? "checked" : ""}> fecha sempre alguns dias antes do vencimento (não num dia fixo)</label>
         ${split ? `<label class="check pf-own"><input type="checkbox" data-f="partner" ${c.partner ? "checked" : ""}> é de ${esc(who)} (você manda o dinheiro e a pessoa paga)</label>` : ""}
       </div>`).join("") : `<p class="hint">Nenhum cartão. Se você não usa cartão de crédito, pode deixar assim.</p>`;
   }
@@ -2254,7 +2437,9 @@ html.privacy .story-card .v { filter: blur(10px); }
     c[f] = f === "partner" ? e.target.checked : f === "name" ? e.target.value : parseInt(e.target.value, 10) || "";
     if (f === "name") { const tag = row.querySelector(".bk"); if (!c.id) { c.tag = (c.name || "?").slice(0, 2).toLowerCase(); tag.textContent = c.tag; } }
   });
-  $("pfCards").addEventListener("change", (e) => { if (e.target.dataset.f === "partner") { pf.cards[+e.target.closest("[data-n]").dataset.n].partner = e.target.checked; } });
+  $("pfCards").addEventListener("change", (e) => {
+    if (e.target.dataset.f === "relClose") { const c = pf.cards[+e.target.closest("[data-n]").dataset.n]; if (e.target.checked) { c.closeBefore = c.closeBefore || 8; c.due = c.due || 1; delete c.fixedClose; } else { delete c.closeBefore; if (/ita[uú]/i.test(c.name)) c.fixedClose = true; } pfSync(); return; }
+    if (e.target.dataset.f === "partner") { pf.cards[+e.target.closest("[data-n]").dataset.n].partner = e.target.checked; } });
   $("pfCards").addEventListener("click", (e) => { const x = e.target.closest("[data-del]"); if (!x) return; pf.cards.splice(+x.closest("[data-n]").dataset.n, 1); pfSync(); });
   $("pfClose").addEventListener("click", () => $("profileDlg").close());
   $("profileDlg").addEventListener("cancel", (e) => { if (pfWelcome) e.preventDefault(); });
@@ -2269,7 +2454,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     for (const c of pf.cards) {
       c.name = (c.name || "").trim();
       if (!c.name) return msg("Dê um nome para cada cartão, ou remova o que estiver vazio.");
-      if (!(c.closing >= 1 && c.closing <= 31)) return msg(`Digite o dia em que o ${c.name} fecha.`);
+      if (c.closeBefore) { if (!(c.closeBefore >= 1 && c.closeBefore <= 28)) return msg(`Digite quantos dias antes do vencimento o ${c.name} fecha.`); if (!c.due) return msg(`Digite o dia de vencimento do ${c.name}.`); c.closing = c.closing || 25; }
+      else if (!(c.closing >= 1 && c.closing <= 31)) return msg(`Digite o dia em que o ${c.name} fecha.`);
       if (c.due !== "" && c.due != null && !(c.due >= 1 && c.due <= 31)) return msg(`O vencimento do ${c.name} precisa ser de 1 a 31.`);
       if (!c.due) delete c.due;
       if (!c.id) {

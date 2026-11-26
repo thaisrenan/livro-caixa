@@ -545,9 +545,27 @@ dialog.ask .rep { text-align: center; }
 .diag.warn .dg-ic { background: var(--warn); } .diag.bad .dg-ic { background: var(--out); } .diag.info .dg-ic { background: var(--neutral); }
 .score { font-size: var(--fs-xs); font-weight: 700; padding: 4px 10px; border-radius: 99px; color: #fff; background: var(--in); }
 .score.warn { background: var(--warn); } .score.bad { background: var(--out); }
-.sources ul { margin: 8px 0; padding-left: 18px; display: grid; gap: 8px; font-size: var(--fs-sm); line-height: 1.45; }
-.sources a { color: var(--accent); font-weight: 600; }
-.sources { padding: 12px 0; }
+.plan-save { display: grid; gap: 10px; margin: 14px 0 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+.mp-h { font-family: var(--font-body); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 16px 0 8px; }
+.mp-card { position: relative; display: grid; gap: 8px; padding: 14px 14px 12px 18px; margin-bottom: 10px; border-radius: 16px; background: var(--sheet-2); border: 1px solid var(--rule); overflow: hidden; animation: up .4s var(--ease) both; transition: transform .2s var(--ease), box-shadow .2s; }
+.mp-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(var(--ring-a), var(--ring-b)); }
+.mp-card.now::before { background: linear-gradient(#fb923c, #ef4444); }
+@media (hover: hover) { .mp-card:hover { transform: translateY(-2px); box-shadow: var(--lift); } }
+.mp-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.mp-top b { font-family: var(--font-display); font-size: 1.1rem; letter-spacing: -.01em; display: block; }
+.mp-meta { font-size: var(--fs-xs); color: var(--muted); }
+.mp-st { flex: none; font-size: 0.6875rem; font-weight: 700; padding: 3px 9px; border-radius: 99px; color: var(--in); background: var(--in-soft); }
+.mp-card.wait .mp-st { color: var(--warn); background: color-mix(in srgb, var(--warn) 15%, transparent); }
+.mp-card.far .mp-st { color: var(--muted); background: var(--sheet); }
+.mp-how { display: flex; align-items: center; gap: 8px; font-size: var(--fs-md); font-weight: 600; }
+.mp-how .dot { background: var(--in); }
+.mp-card.wait .mp-how .dot { background: var(--warn); } .mp-card.far .mp-how .dot { background: var(--neutral); }
+.mp-act { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.mp-x { margin-left: auto; border: 0; background: none; color: var(--muted); font-size: 1.3rem; padding: 2px 6px; }
+.mp-x:hover { color: var(--out); }
+.mp-empty { display: flex; gap: 12px; align-items: center; padding: 16px 0; color: var(--muted); font-size: var(--fs-sm); line-height: 1.5; }
+.mp-empty span { font-size: 2rem; }
+.mp-empty p { margin: 0; }
 /* conferir fatura */
 .rc-sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .rc-sum > div { background: var(--sheet-2); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
@@ -725,19 +743,9 @@ html.privacy .story-card .v { filter: blur(10px); }
       <div class="block-head"><h2 id="hLimits">Limite dos cartões</h2></div>
       <div id="limitsBox"></div>
     </section>
-    <section class="block" aria-labelledby="hSources">
-      <div class="block-head"><h2 id="hSources">Como o app pensa</h2></div>
-      <div class="sources">
-        <p class="hint">As opiniões seguem regras clássicas de planejamento financeiro, aplicadas aos seus números:</p>
-        <ul>
-          <li><b>Reserva de emergência de 3 a 6 meses</b> do custo de vida; 12 meses é a referência mais prudente. <a href="https://www.gov.br/investidor/pt-br/educacional/publicacoes-educacionais/guias/guia-de-planejamento-financeiro/guia-planejamento-financeiro.pdf/@@download/file" target="_blank" rel="noopener">Guia de Planejamento Financeiro (CVM)</a></li>
-          <li><b>Dívidas e parcelas até 30% da renda</b>; a partir de 40% o Banco Central passa a exigir alertas de crédito em 2027. <a href="https://www.serasa.com.br/credito/blog/comprometimento-renda/" target="_blank" rel="noopener">Serasa</a> · <a href="https://consumidormoderno.com.br/novas-regras-credito-banco-central-2027/" target="_blank" rel="noopener">Novas regras do BC</a></li>
-          <li><b>Regra 50/30/20:</b> 50% necessidades, 30% desejos, 20% poupança. <a href="https://www.acorns.com/learn/saving/50-30-20-budget-rule/" target="_blank" rel="noopener">Elizabeth Warren, "All Your Worth"</a></li>
-          <li><b>Necessidade x desejo, sonhos com prazo e consumo planejado.</b> <a href="https://www.bcb.gov.br/pre/pef/port/caderno_cidadania_financeira.pdf" target="_blank" rel="noopener">Caderno de Educação Financeira do Banco Central</a></li>
-          <li><b>À vista com desconto x parcelado:</b> compara os juros embutidos no parcelado com o que o seu dinheiro rende na reserva (CDI, já sem IR).</li>
-        </ul>
-        <p class="hint">É uma orientação automática, não substitui um planejador financeiro certificado.</p>
-      </div>
+    <section class="block myplans" aria-labelledby="hMyPlans">
+      <div class="block-head"><h2 id="hMyPlans">Meus planos</h2><span class="tot num" id="mpTot"></span></div>
+      <div id="myPlans"></div>
     </section>
   </div>
 
@@ -1141,7 +1149,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("title").innerHTML = state.view === "year" ? "12 meses" : state.view === "arch" ? "Anos" : state.view === "partner" ? esc(P()) : state.view === "plan" ? "Planejar" : `${monthOnly(v.N).replace(/^./, c => c.toUpperCase())} <span class="yr">${v.N.slice(0, 4)}</span>`;
     if (state.view === "year") { renderYear(); renderEnds(); }
     if (state.view === "arch") renderArch();
-    if (state.view === "plan") { renderDiag(); renderLimits(); if (plan.last) runPlan(false); }
+    if (state.view === "plan") { renderDiag(); renderLimits(); renderMyPlans(); if (plan.last) runPlan(false); }
 
     // sobra
     const living = t0 >= v.payday && t0 < v.next, future = t0 < v.payday;
@@ -1641,6 +1649,53 @@ html.privacy .story-card .v { filter: blur(10px); }
   function planCfg() { const p = state.settings.planRules || {}; return { pct: p.pct ?? 30, months: p.months ?? 3 }; }
   $("tabPlan").addEventListener("click", () => { const c = planCfg(); $("plPct").value = c.pct; $("plMonths").value = c.months; $("plSplitRow").hidden = !hasPartner(); $("plSplitLbl").textContent = `Parte de ${P()} (%)`; });
   $("plGo").addEventListener("click", () => runPlan(true));
+  // ---------- meus planos: compras salvas, urgentes e para quando der ----------
+  const myPlans = () => state.settings.plans || [];
+  const savePlans = (list) => store && store.putSettings({ ...state.settings, plans: list });
+  $("planOut").addEventListener("click", async (e) => {
+    const pb = e.target.closest("[data-prio]"); if (pb) { plan.prio = pb.dataset.prio; $("plPrio").querySelectorAll("[data-prio]").forEach(b => b.setAttribute("aria-pressed", String(b === pb))); return; }
+    if (!e.target.closest("#plSave") || !plan.last) return;
+    const item = { ...plan.last, prio: plan.prio || "later", id: plan.editing || newId(), at: plan.editing ? (myPlans().find(x => x.id === plan.editing) || {}).at || Date.now() : Date.now() };
+    const list = plan.editing ? myPlans().map(x => x.id === plan.editing ? item : x) : [...myPlans(), item];
+    await savePlans(list); plan.editing = item.id;
+    toast(`${item.desc} salvo nos seus planos.`); $("hMyPlans").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  function renderMyPlans() {
+    const list = myPlans();
+    $("mpTot").textContent = list.length ? `${list.length} ${list.length === 1 ? "plano" : "planos"}` : "";
+    if (!list.length) { $("myPlans").innerHTML = `<div class="mp-empty"><span>🗂️</span><p>Analise uma compra acima e toque em <b>Salvar nos meus planos</b>. Ela fica aqui, separada entre urgentes e as que podem esperar, sempre com a conta atualizada.</p></div>`; return; }
+    const card = (x) => {
+      const r = runPlan(false, x, true) || {}, b = r.best, m = r.m || 1;
+      const st = b ? "ok" : r.mesesJuntar != null && r.mesesJuntar <= 12 ? "wait" : "far";
+      const how = b ? (b.fromSobra ? `Dá para pagar à vista com a sobra` : `${b.ent ? `${kfmt(Math.round(b.ent / m))} de entrada + ` : ""}${b.n}x de ${kfmt(Math.ceil(b.parc / m))} no ${esc(b.c.name)}`)
+        : r.mesesJuntar != null && r.mesesJuntar > 0 ? `Junte por ${r.mesesJuntar} ${r.mesesJuntar === 1 ? "mês" : "meses"} (${mName(shiftMonth(r.N0, r.mesesJuntar))})` : "Ainda fora do alcance: comece guardando um pouco por mês";
+      return `<div class="mp-card ${x.prio} ${st}" data-plan="${x.id}">
+        <div class="mp-top"><div><b>${esc(x.desc)}</b><span class="mp-meta">${fmt(x.price)}${x.total ? ` · parcelado ${fmt(x.total)}` : ""}${x.split ? ` · ${x.split}% de ${esc(P())}` : ""} · ${x.need ? "necessidade" : "desejo"}</span></div>
+          <span class="mp-st">${st === "ok" ? "Pronto" : st === "wait" ? "Juntando" : "Distante"}</span></div>
+        <div class="mp-how"><span class="dot"></span>${how}</div>
+        <div class="mp-act"><button type="button" class="btn small" data-mp-open>Ver análise</button><button type="button" class="btn small" data-mp-prio>${x.prio === "now" ? "Mover para quando der" : "Marcar urgente"}</button><button type="button" class="btn small" data-mp-done>✓ Comprei</button><button type="button" class="mp-x" data-mp-del aria-label="Apagar plano">×</button></div>
+      </div>`;
+    };
+    const now = list.filter(x => x.prio === "now"), later = list.filter(x => x.prio !== "now");
+    $("myPlans").innerHTML = (now.length ? `<h3 class="mp-h">🔥 Urgentes</h3>${now.map(card).join("")}` : "") + (later.length ? `<h3 class="mp-h">🌱 Quando der</h3>${later.map(card).join("")}` : "");
+  }
+  $("myPlans").addEventListener("click", async (e) => {
+    const el = e.target.closest("[data-plan]"); if (!el) return;
+    const x = myPlans().find(y => y.id === el.dataset.plan); if (!x) return;
+    if (e.target.closest("[data-mp-open]")) {
+      $("plDesc").value = x.desc; $("plPrice").value = toInput(x.price); $("plTotal").value = x.total ? toInput(x.total) : ""; $("plMaxN").value = x.maxN || 10; $("plSplit").value = x.split || "";
+      $("plNeed").querySelectorAll("[data-need]").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.need === "1") === !!x.need)));
+      plan.editing = x.id; plan.prio = x.prio; runPlan(true); return;
+    }
+    if (e.target.closest("[data-mp-prio]")) { await savePlans(myPlans().map(y => y.id === x.id ? { ...y, prio: y.prio === "now" ? "later" : "now" } : y)); return; }
+    if (e.target.closest("[data-mp-done], [data-mp-del]")) {
+      const before = myPlans(), done = !!e.target.closest("[data-mp-done]");
+      await savePlans(before.filter(y => y.id !== x.id)); if (plan.editing === x.id) plan.editing = null;
+      toast(done ? `Parabéns pela compra planejada: ${x.desc}! 🎉` : `${x.desc} apagado.`, () => savePlans(before));
+      if (done) confetti();
+    }
+  });
+  $("plDesc").addEventListener("input", () => { plan.editing = null; });
   $("plNeed").addEventListener("click", (e) => { const b = e.target.closest("[data-need]"); if (!b) return; $("plNeed").querySelectorAll("[data-need]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); });
   // juros mensais embutidos num parcelado de n vezes (primeira parcela no mês seguinte)
   function impliedRate(price, total, n) {
@@ -1649,7 +1704,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     for (let k = 0; k < 60; k++) { const r = (lo + hi) / 2, pv = pmt * (1 - Math.pow(1 + r, -n)) / r; if (pv > price) lo = r; else hi = r; }
     return (lo + hi) / 2;
   }
-  function runPlan(fromForm) {
+  function runPlan(fromForm, given, quiet) {
     if (fromForm) {
       const price = parseAmount($("plPrice").value), tot = $("plTotal").value.trim() ? parseAmount($("plTotal").value) : null;
       if (!(price > 0)) { toast("Digite o preço."); $("plPrice").focus(); return; }
@@ -1659,7 +1714,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       const split = hasPartner() ? Math.max(0, Math.min(95, parseInt($("plSplit").value, 10) || 0)) : 0;
       plan.last = { desc: $("plDesc").value.trim() || "a compra", price: Math.round(price), total: tot > price ? Math.round(tot) : null, pct, months, need, maxN, split };
     }
-    const P0 = plan.last; if (!P0) return;
+    const P0 = given || plan.last; if (!P0) return;
     // compra dividida: a conta (sobra, reserva, parcela) usa só a sua parte; o cartão é ocupado pelo valor inteiro
     const m = 1 - (P0.split || 0) / 100, PR = Math.round(P0.price * m), TOT = P0.total ? Math.round(P0.total * m) : null;
     // sobra média só dos meses que já têm salário lançado (meses vazios puxariam a média para baixo)
@@ -1699,6 +1754,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     if (P0.need && mesesRes >= 3 && PR <= entradaMax) master.push("Como é uma necessidade e a reserva está saudável, usar parte dela é aceitável. Depois, recomponha com o \"Guardar no mês\".");
     const mesesJuntar = parcMax ? Math.ceil(Math.max(0, PR - entradaMax) / parcMax) : null;
     const ends = endingInstallments(N0);
+    if (quiet) return { best, m, PR, mesesJuntar, aVistaReserva, N0 };
     let h = `<div class="plan-ctx"><div><span>Sobra média</span><b class="num">${kfmt(sobra)}/mês</b></div><div><span>Parcela máxima</span><b class="num">${kfmt(parcMax)}</b></div><div><span>Pode sair da reserva</span><b class="num">${kfmt(entradaMax)}</b></div></div>
       <p class="hint">Reserva hoje ${kfmt(res)} · mínimo de segurança ${kfmt(resMin)} (${P0.months} ${P0.months === 1 ? "mês" : "meses"} de gastos de ${kfmt(gastoMes)}).</p>`;
     if (best) {
@@ -1728,6 +1784,9 @@ html.privacy .story-card .v { filter: blur(10px); }
     const mx = Math.max(1, ...impact.map(x => Math.abs(x.r.sobra)), ...impact.map(x => Math.abs(x.after)));
     h += `<div class="rc-sec"><h3>Sua sobra com a compra</h3><div class="plan-chart">${impact.map(({ r, after }) => `<div class="pc-col" title="${monthOnly(r.N)}: ${fmt(after)}"><span class="pc-bar" style="height:${Math.max(3, Math.abs(r.sobra) / mx * 70)}px"></span><span class="pc-bar now${after < 0 ? " neg" : ""}" style="height:${Math.max(3, Math.abs(after) / mx * 70)}px"></span><small>${monthOnly(r.N).slice(0, 3)}</small></div>`).join("")}</div>
       <p class="hint"><b class="dot" style="background:var(--neutral)"></b> sem a compra &nbsp;<b class="dot" style="background:var(--accent)"></b> com a compra</p></div>`;
+    const prio = plan.prio || "later";
+    h += `<div class="plan-save"><div class="seg" id="plPrio" role="group" aria-label="Prioridade"><button type="button" data-prio="now" aria-pressed="${prio === "now"}">🔥 Urgente</button><button type="button" data-prio="later" aria-pressed="${prio === "later"}">🌱 Quando der</button></div>
+      <button class="btn primary" type="button" id="plSave">${plan.editing ? "Atualizar o plano" : "Salvar nos meus planos"}</button></div>`;
     $("planOut").innerHTML = h; $("planRes").hidden = false;
     if (fromForm) $("planRes").scrollIntoView({ behavior: "smooth", block: "start" });
   }

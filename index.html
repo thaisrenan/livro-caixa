@@ -236,6 +236,19 @@ details.how p, details.how small { display: block; margin: 4px 0 0; }
 .cat-top span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cat-top .num { font-weight: 600; white-space: nowrap; }
 .cat-top small { color: var(--muted); font-weight: 500; margin-left: 4px; }
+.cat-btn { all: unset; display: block; width: 100%; cursor: pointer; box-sizing: border-box; }
+.cat-btn .cat-top { display: flex; }
+.cat-btn .cat-bar { display: block; }
+.cat-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
+.cat-n { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); margin-left: 4px; }
+.catitems { display: grid; gap: 2px; margin-top: 10px; padding: 8px 10px; border-radius: 12px; background: var(--sheet-2); animation: up .3s var(--ease); }
+.catitem { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.catitem:last-child { border-bottom: 0; }
+.catitem .name { font-weight: 500; font-size: var(--fs-md); overflow-wrap: anywhere; }
+.catitem .name small { color: var(--muted); font-weight: 400; }
+.catitem .meta { font-size: var(--fs-xs); color: var(--muted); }
+.catitem .val { font-weight: 600; font-size: var(--fs-md); }
+.catsel { grid-column: 1 / -1; justify-self: start; max-width: 100%; font-size: var(--fs-sm); padding: 6px 28px 6px 10px; border-radius: 9px; border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); }
 .cat-bar { height: 8px; border-radius: 99px; background: var(--sheet-2); overflow: hidden; }
 .cat-bar i { display: block; height: 100%; border-radius: 99px; transform-origin: left; animation: grow .9s var(--ease) both; }
 @keyframes grow { from { transform: scaleX(0); } }
@@ -1270,24 +1283,57 @@ html.privacy .story-card .v { filter: blur(10px); }
   function renderCats(v) {
     const mine = (state.catMode || "mine") === "mine";
     document.querySelectorAll("#catMode button").forEach(b => b.setAttribute("aria-pressed", String((b.dataset.cm === "mine") === mine)));
-    const all = [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0]), ...v.daily];
+    // cada gasto com o mês em que está guardado, para poder abrir a lista e trocar a categoria
+    const withYm = [...Object.values(v.cards).flat().map(i => [i, v.M]), ...v.bills, ...v.daily.map(i => [i, v.N])];
+    const all = withYm.map(x => x[0]);
     const val = (i) => mine ? Math.max(0, i.amount - (i.renan || 0)) : i.amount;
     const total = all.reduce((a, i) => a + val(i), 0);
     if (!total) { $("catsBox").innerHTML = `<p class="empty">Nenhum gasto lançado neste mês.</p>`; return; }
-    const by = {};
-    all.forEach(i => { const c = i.cat || "Outros"; by[c] = (by[c] || 0) + val(i); });
+    const by = {}, members = {};
+    withYm.forEach(([i, ym]) => { const c = i.cat || "Outros"; by[c] = (by[c] || 0) + val(i); (members[c] = members[c] || []).push([i, ym]); });
     let cats = Object.entries(by).filter(([, x]) => x > 0).sort((a, b) => b[1] - a[1]);
-    if (cats.length > 7) cats = [...cats.slice(0, 6), ["Outras categorias", cats.slice(6).reduce((a, [, x]) => a + x, 0)]];
+    if (cats.length > 7) {
+      const rest = cats.slice(6);
+      members["Outras categorias"] = rest.flatMap(([c]) => members[c]);
+      cats = [...cats.slice(0, 6), ["Outras categorias", rest.reduce((a, [, x]) => a + x, 0)]];
+    }
+    const opts = catOptions();
+    const itemsOfCat = (c) => members[c].filter(([i]) => val(i) > 0).sort((a, b) => val(b[0]) - val(a[0])).map(([i, ym]) => {
+      const where = isCard(i) ? cardName(i.method) : i.kind === "fixed" ? "conta" : "débito ou PIX", cur = i.cat || "Outros";
+      return `<div class="catitem"><div><div class="name">${esc(i.desc)}${i.inst ? ` <small>(${esc(i.inst)})</small>` : ""}</div><div class="meta">${esc(where)}</div></div>
+        <span class="val num">${fmt(val(i))}</span>
+        <select class="catsel" data-catset="${ym}|${i.id}" aria-label="Categoria de ${esc(i.desc)}">${[...new Set([cur, ...opts])].map(o => `<option${o === cur ? " selected" : ""}>${esc(o)}</option>`).join("")}<option value="__new">+ Nova categoria…</option></select></div>`;
+    }).join("");
     const max = cats[0][1], pc = (x) => Math.round(x / total * 100);
     const fixed = all.filter(i => i.kind === "fixed").reduce((a, i) => a + val(i), 0), varb = total - fixed;
     $("catsBox").innerHTML = `<div class="fv">
         <div class="fv-bar" role="img" aria-label="Fixos ${pc(fixed)}%, variáveis ${pc(varb)}%"><i style="width:${fixed / total * 100}%"></i><i style="width:${varb / total * 100}%"></i></div>
         <div class="fv-leg"><div><span><b class="dot" style="background:var(--accent)"></b>Fixos</span><strong class="num">${fmt(fixed)}</strong><small>${pc(fixed)}% · contas que se repetem</small></div>
         <div><span><b class="dot" style="background:var(--accent-2)"></b>Variáveis</span><strong class="num">${fmt(varb)}</strong><small>${pc(varb)}% · compras do dia a dia</small></div></div></div>
-      <div class="cats">${cats.map(([c, x], k) => `<div class="cat"><div class="cat-top"><span>${esc(c)}</span><span class="num">${fmt(x)} <small>${pc(x)}%</small></span></div>
-        <div class="cat-bar"><i style="width:${(x / max * 100).toFixed(1)}%;background:${k < 6 ? CAT_COLORS[k] : "var(--neutral)"}"></i></div></div>`).join("")}</div>
-      <p class="hint" style="padding:4px 0 10px">${mine ? `Só a sua parte: tira o que ${P()} paga.` : `Valor cheio, incluindo a parte de ${P()}.`} Total ${fmt(total)}.</p>`;
+      <div class="cats">${cats.map(([c, x], k) => { const open = state.open["cat:" + c]; return `<div class="cat${open ? " open" : ""}"><button type="button" class="cat-btn" data-cattoggle="${esc(c)}" aria-expanded="${!!open}"><span class="cat-top"><span>${esc(c)} <small class="cat-n">${members[c].length} · ${open ? "fechar" : "ver"}</small></span><span class="num">${fmt(x)} <small>${pc(x)}%</small></span></span>
+        <span class="cat-bar"><i style="width:${(x / max * 100).toFixed(1)}%;background:${k < 6 ? CAT_COLORS[k] : "var(--neutral)"}"></i></span></button>
+        ${open ? `<div class="catitems">${c === "Outros" ? `<p class="hint">Escolha a categoria certa de cada um.</p>` : ""}${itemsOfCat(c)}</div>` : ""}</div>`; }).join("")}</div>
+      <p class="hint" style="padding:4px 0 10px">Toque numa categoria para ver o que entra nela. ${mine ? `Só a sua parte: tira o que ${P()} paga.` : `Valor cheio, incluindo a parte de ${P()}.`} Total ${fmt(total)}.</p>`;
   }
+  // categorias para escolher: as que você já usa e as mais comuns
+  const BASE_CATS = ["Mercado", "Moradia", "Delivery e restaurantes", "Transporte", "Moto", "Saúde", "Educação", "Lazer", "Assinaturas", "Compras online", "Celular e internet", "Pets", "Beleza", "Presentes", "Roupas", "Outros"];
+  const catOptions = () => [...new Set([...BASE_CATS, ...allItems().filter(i => i.kind !== "in" && i.cat && i.kind !== "invest").map(i => i.cat)])].sort((a, b) => a === "Outros" ? 1 : b === "Outros" ? -1 : a.localeCompare(b, "pt-BR"));
+  $("catsBox").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-cattoggle]"); if (!t) return;
+    const k = "cat:" + t.dataset.cattoggle; state.open[k] = !state.open[k]; renderCats(monthView(state.month));
+  });
+  $("catsBox").addEventListener("change", async (e) => {
+    const sel = e.target.closest("[data-catset]"); if (!sel || !store) return;
+    const [ym, id] = sel.dataset.catset.split("|"), item = itemsOf(ym).find(i => i.id === id); if (!item) return;
+    let cat = sel.value;
+    if (cat === "__new") { cat = (prompt("Nome da nova categoria") || "").trim(); if (!cat) { renderCats(monthView(state.month)); return; } }
+    const n = seriesAfter(ym, item).length;
+    const ans = n ? await askScope("Mudar a categoria dos próximos também?", `"${item.desc}" se repete em mais ${n} ${n === 1 ? "mês" : "meses"} depois deste.`, n, "Mudar") : "one";
+    if (!ans) { renderCats(monthView(state.month)); return; }
+    await save(ym, itemsOf(ym).map(i => i.id === id ? { ...i, cat } : i));
+    const more = ans === "next" ? await applyToSeries(ym, item, (list, ids) => list.map(i => ids.has(i.id) ? { ...i, cat } : i)) : 0;
+    toast(`${item.desc}: agora em ${cat}${more ? ` (e em mais ${more} ${more === 1 ? "mês" : "meses"})` : ""}.`);
+  });
   $("catMode").addEventListener("click", (e) => { const b = e.target.closest("[data-cm]"); if (!b) return; state.catMode = b.dataset.cm; renderCats(monthView(state.month)); });
 
   function renderReserve(v) {

@@ -818,7 +818,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   <section class="block" aria-labelledby="hBills">
     <div class="block-head"><h2 id="hBills">Contas do dia</h2><span class="tot num" id="totBills"></span></div>
     <div id="listBills"></div>
-    <div class="row" style="padding:6px 0 10px"><button class="btn" id="reconBtn" type="button">📄 Conferir fatura com o PDF</button><input type="file" id="reconFile" accept="application/pdf,.pdf"></div>
+    <div class="row" style="padding:6px 0 10px"><button class="btn" id="reconBtn" type="button">📄 Conferir fatura (PDF ou print)</button><input type="file" id="reconFile" accept="application/pdf,.pdf,image/*"></div>
   </section>
 
   <section class="block" aria-labelledby="hDaily">
@@ -1482,6 +1482,14 @@ html.privacy .story-card .v { filter: blur(10px); }
     }
     return out;
   }
+  // print ou foto da fatura: lê o texto da imagem no próprio aparelho (OCR) e usa a mesma leitura do PDF
+  async function readImage(file) {
+    await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js");
+    const { data } = await Tesseract.recognize(file, "por");
+    // cada palavra vira um "pedaço" da linha, na ordem em que aparece
+    const pages = [data.text.split("\n").map((line, y) => line.trim().split(/\s+/).map((w, x) => ({ str: w.replace(/^R\$/, "").replace(/[Oo](?=\d)|(?<=\d)[Oo]/g, "0"), x, y: -y * 10 }))).flat()];
+    return { lines: parseFatura(pages), text: data.text };
+  }
   async function readPdf(file) {
     await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
     pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -1494,14 +1502,17 @@ html.privacy .story-card .v { filter: blur(10px); }
     }
     return { lines: parseFatura(pages), text };
   }
-  let recon = null;
+  let recon = null, recon_img = false;
   $("reconBtn").addEventListener("click", () => $("reconFile").click());
   $("reconFile").addEventListener("change", async (e) => {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
     $("rcBody").innerHTML = `<p class="hint">Lendo a fatura…</p>`; $("reconDlg").showModal();
     try {
-      const { lines, text } = await readPdf(f);
-      if (!lines.length) { $("rcBody").innerHTML = `<p class="hint">Não encontrei compras nesse PDF. Ele é a fatura do cartão, baixada do app do banco?</p>`; return; }
+      const isImg = /^image\//.test(f.type) || /\.(png|jpe?g|webp|heic)$/i.test(f.name);
+      if (isImg) $("rcBody").innerHTML = `<p class="hint">Lendo o print… isso leva alguns segundos.</p>`;
+      const { lines, text } = await (isImg ? readImage(f) : readPdf(f));
+      recon_img = isImg;
+      if (!lines.length) { $("rcBody").innerHTML = `<p class="hint">Não encontrei compras nesse arquivo. Ele é a fatura do cartão? Se for print, tente um mais nítido ou o PDF.</p>`; return; }
       const vm = /Vencimento:?\s*(\d{2})\/(\d{2})\/(\d{4})/i.exec(text), tm = /Total desta fatura\s*([\d.]+,\d{2})/i.exec(text);
       const venc = vm ? new Date(+vm[3], +vm[2] - 1, +vm[1]) : today0();
       // qual cartão: pelo nome do banco no PDF; se não achar, o primeiro
@@ -1515,7 +1526,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       const score = (M) => { const pool = cardItemsOf(M, card).map(i => i.amount); return lines.filter(l => { const k = pool.indexOf(l.amount); if (k < 0) return false; pool.splice(k, 1); return true; }).length; };
       recon.M = cand.reduce((best, M) => score(M) >= score(best) ? M : best, cand[0]);
       renderRecon();
-    } catch (err) { $("rcBody").innerHTML = `<p class="hint">Não consegui ler esse PDF. Confira a internet (na primeira vez o app baixa o leitor de PDF) e tente de novo.</p>`; }
+    } catch (err) { $("rcBody").innerHTML = `<p class="hint">Não consegui ler esse arquivo. Confira a internet (na primeira vez o app baixa o leitor de PDF e de imagem) e tente de novo.</p>`; }
   });
   const cardItemsOf = (M, card) => card ? itemsOf(M).filter(i => (i.kind === "var" || i.kind === "fixed") && (cardOf(i.method) || {}).id === card.id) : [];
   function lineDate(l) {
@@ -1543,8 +1554,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     const row = (left, name, meta, val, actions) => `<div class="rc-row">${left}<div><div class="name">${name}</div><div class="meta">${meta}</div></div><span class="val num">${val}</span>${actions ? `<div class="row">${actions}</div>` : ""}</div>`;
     $("rcTitle").textContent = `Fatura ${card ? card.name : ""}`;
     const tested = card && TESTED_BANKS.test(card.name + " " + (card.alias || ""));
-    let h = (tested ? "" : `<p class="where">Primeira vez com este banco: a leitura foi feita do jeito genérico. Se algo não bater, mande o PDF de exemplo para a Thais encaminhar ao suporte do app e a leitura ser ajustada.</p>`) + `<p class="hint">Vence ${ddmm(recon.venc)} · comparada com as compras de ${card ? cardName(card.method) : "cartão"} pagas em ${ddmm(lastBizDay(M))}.</p>
-      <div class="rc-sum"><div><span>No PDF</span><b class="num">${fmt(recon.total ?? pdfTot)}</b></div><div><span>No app</span><b class="num">${fmt(appTot)}</b></div></div>`;
+    let h = (recon_img ? `<p class="where">Lido de imagem: confira se algum valor saiu trocado. O PDF é sempre mais preciso.${recon.total == null ? " Se o print não mostra a fatura inteira, só as compras que aparecem nele são comparadas." : ""}</p>` : "") + (tested ? "" : `<p class="where">Primeira vez com este banco: a leitura foi feita do jeito genérico. Se algo não bater, mande o PDF de exemplo para a Thais encaminhar ao suporte do app e a leitura ser ajustada.</p>`) + `<p class="hint">Vence ${ddmm(recon.venc)} · comparada com as compras de ${card ? cardName(card.method) : "cartão"} pagas em ${ddmm(lastBizDay(M))}.</p>
+      <div class="rc-sum"><div><span>Na fatura</span><b class="num">${fmt(recon.total ?? pdfTot)}</b></div><div><span>No app</span><b class="num">${fmt(appTot)}</b></div></div>`;
     if (!app.length && !pdfLeft.length && !diff.length) h += `<div class="rc-ok">✓ Tudo bateu: ${ok.length} compras iguais.</div>`;
     else h += `<div class="rc-diff">Diferença de ${fmt(Math.abs(appTot - (recon.total ?? pdfTot)))}. Veja abaixo o que não bateu.</div>`;
     if (app.length) h += `<div class="rc-sec"><h3>No app, mas não na fatura (${app.length})</h3>${app.map(({ i, d }) => row(`<span class="dchip">${d ? `<b>${pad(d.getDate())}</b>${MES3[d.getMonth()]}` : "—"}</span>`, esc(i.desc) + (i.inst ? ` <small>${esc(i.inst)}</small>` : ""), "pode ter sido cobrado em outro cartão ou em outra fatura", fmt(i.amount),

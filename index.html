@@ -240,6 +240,7 @@ details.how p, details.how small { display: block; margin: 4px 0 0; }
 .frow .fdesc { display: grid; justify-items: start; gap: 3px; min-width: 0; }
 .frow .name { font-weight: 500; font-size: var(--fs-md); }
 .frow .name small { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); margin-left: 4px; }
+.fpills { display: flex; flex-wrap: wrap; gap: 4px; }
 .fpill { font-size: 0.6875rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; color: var(--renan); background: var(--renan-soft); }
 .fpill.all { color: var(--muted); background: var(--sheet-2); }
 .frow .fval { display: grid; justify-items: end; gap: 1px; }
@@ -1029,6 +1030,15 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("heroSub").textContent = (v.planLeft ? `Já tirei ${kfmt(v.planLeft)} para guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia` : "");
 
     // entra
+    // linha com etiqueta de data, divisão e valor inteiro (fatura e débito/PIX)
+    const dateRow = (i, ym, d, today) => {
+      const tag = d ? `<span class="dchip"><b>${pad(d.getDate())}</b>${MES3[d.getMonth()]}</span>` : `<span class="dchip none">${i.inst ? "parc." : "mensal"}</span>`;
+      const mine = i.amount - (i.renan || 0), split = i.renan ? (i.renan >= i.amount ? `tudo de ${P()}` : Math.abs(i.renan * 2 - i.amount) <= 1 ? `metade com ${P()}` : `parte com ${P()}`) : "";
+      const pills = [split ? `<span class="fpill${mine ? "" : " all"}">${esc(split)}</span>` : "", today && d && d > today ? `<span class="fpill all">previsto</span>` : ""].join("");
+      return `<div class="line nocheck tap frow" data-edit="${ym}|${i.id}">${tag}
+        <div class="fdesc"><div class="name">${esc(i.desc)}${i.inst ? ` <small>${esc(i.inst)}</small>` : ""}</div>${pills ? `<span class="fpills">${pills}</span>` : ""}</div>
+        <div class="fval"><span class="val num${mine ? "" : " zero"}">${fmt(mine)}</span>${i.renan ? `<small class="num">de ${fmt(i.amount)}</small>` : ""}</div></div>`;
+    };
     // valor mostrado = sua parte; quando dividido, a meta lembra o valor inteiro
     const whole = (i) => i.renan ? `conta toda ${fmt(i.amount)}` : "";
     const lineEdit = (i, ym, txt, meta) => { const m = [meta, whole(i)].filter(Boolean).join(" · "); return `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${txt}</div>${m ? `<div class="meta">${m}</div>` : ""}</div><span class="val num">${fmt(i.amount - (i.renan || 0))}</span></div>`; };
@@ -1054,11 +1064,7 @@ html.privacy .story-card .v { filter: blur(10px); }
           <span class="val num">${fmt(full(list) - renanOf(list))}</span></div>` +
         (open ? `<div class="sublist fatura">${list.slice().sort((a, b) => (a.day ? itemDate(a, v.M) : 9e15) - (b.day ? itemDate(b, v.M) : 9e15)).map(i => {
           // fatura em ordem de data, como no extrato do banco; a data fica numa etiqueta à esquerda
-          const d = i.day ? itemDate(i, v.M) : null, tag = d ? `<span class="dchip"><b>${pad(d.getDate())}</b>${MES3[d.getMonth()]}</span>` : `<span class="dchip none">${i.inst ? "parc." : "mensal"}</span>`;
-          const mine = i.amount - (i.renan || 0), split = i.renan ? (i.renan >= i.amount ? `tudo de ${P()}` : i.renan * 2 === i.amount || Math.abs(i.renan * 2 - i.amount) <= 1 ? `metade com ${P()}` : `parte com ${P()}`) : "";
-          return `<div class="line nocheck tap frow" data-edit="${v.M}|${i.id}">${tag}
-            <div class="fdesc"><div class="name">${esc(i.desc)}${i.inst ? ` <small>${esc(i.inst)}</small>` : ""}</div>${split ? `<span class="fpill${mine ? "" : " all"}">${esc(split)}</span>` : ""}</div>
-            <div class="fval"><span class="val num${mine ? "" : " zero"}">${fmt(mine)}</span>${i.renan ? `<small class="num">de ${fmt(i.amount)}</small>` : ""}</div></div>`;
+          return dateRow(i, v.M, i.day ? itemDate(i, v.M) : null);
         }).join("")}</div>` : "");
     }).join("");
     h += v.bills.map(([i, ym]) => `<div class="line${i.paid ? " done" : ""}">${tick(String(!!i.paid), `data-paid="${ym}|${i.id}"`, i.desc + " paga")}
@@ -1067,11 +1073,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("totBills").textContent = fmt(v.myBills);
 
     // gastos do mês
-    const dd = v.daily.slice().sort((a, b) => (a.day || 0) - (b.day || 0));
-    $("listDaily").innerHTML = dd.map(i => {
-      const pm = i.pm || v.N, when = i.day ? new Date(+pm.slice(0, 4), +pm.slice(5) - 1, i.day) : null;
-      return lineEdit(i, v.N, esc(i.desc), when ? `${ddmm(when)}${when > t0 ? " · previsto" : ""}` : "");
-    }).join("") || `<p class="empty">Nenhum gasto ainda. Toque em + Lançar.</p>`;
+    const dd = v.daily.slice().sort((a, b) => (a.day ? itemDate(a, v.N) : 9e15) - (b.day ? itemDate(b, v.N) : 9e15));
+    $("listDaily").innerHTML = dd.map(i => dateRow(i, v.N, i.day ? itemDate(i, v.N) : null, t0)).join("") || `<p class="empty">Nenhum gasto ainda. Toque em + Lançar.</p>`;
     $("totDaily").textContent = fmt(v.mySpent);
 
     $("descs").innerHTML = [...new Set(allItems().map(i => i.desc))].sort().map(d => `<option value="${esc(d)}">`).join("");

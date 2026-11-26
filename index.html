@@ -1061,8 +1061,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("heroRing").style.strokeDashoffset = future ? 100 : (100 - used).toFixed(1);
     $("heroRing").classList.toggle("over", v.left < 0);
     $("heroPct").innerHTML = future ? `<small>ainda não começou</small>` : v.left < 0 ? `!<small>passou</small>` : `${Math.round(used)}%<small>gasto</small>`;
-    // por semana só faz sentido com pelo menos 7 dias até o próximo salário (senão passaria da sobra)
-    const wk = daysLeft >= 7 ? ` · ${fmt(Math.floor(v.left / daysLeft * 7))} por semana` : "";
+    // por semana; na última semana antes do salário, o valor da semana é a própria sobra (nunca passa dela)
+    const wk = daysLeft >= 7 ? ` · ${fmt(Math.floor(v.left / daysLeft * 7))} por semana` : ` · ${fmt(v.left)} nesta última semana (${daysLeft} ${daysLeft === 1 ? "dia" : "dias"})`;
     $("heroSub").textContent = (v.planLeft ? `Já tirei ${kfmt(v.planLeft)} para guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia${wk}, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia${wk}` : "");
 
     // entra

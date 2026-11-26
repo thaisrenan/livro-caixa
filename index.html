@@ -308,6 +308,9 @@ details.how p, details.how small { display: block; margin: 4px 0 0; }
 .btn.small { padding: 7px 12px; font-size: var(--fs-sm); }
 
 html.locked .tabbar, html.locked .wrap { visibility: hidden; }
+/* digitando: a barra some (no iPhone o teclado empurra barras fixas para o meio da tela) */
+@media (max-width: 999px) { html.typing .tabbar { opacity: 0; pointer-events: none; transform: translateY(100%); } }
+.tabbar { transition: opacity .2s, transform .25s var(--ease); }
 
 /* barra de abas embaixo, como app nativo, com o + no meio */
 .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(6, 1fr); align-items: start;
@@ -2523,6 +2526,21 @@ html.privacy .story-card .v { filter: blur(10px); }
     el.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, undo ? 5000 : 2800);
   }
   const SYNC = { syncing: "Sincronizando…", ok: "Sincronizado", pending: "Salvando…", offline: "Sem internet · salvo no aparelho", error: "Erro ao sincronizar" };
+  // ---------- teclado do celular: esconde a barra ao digitar e devolve tudo ao lugar quando o teclado fecha ----------
+  const isField = (el) => el && (el.matches("input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select")) && !el.closest("dialog");
+  document.addEventListener("focusin", (e) => { if (isField(e.target)) document.documentElement.classList.add("typing"); });
+  document.addEventListener("focusout", (e) => {
+    if (!isField(e.target)) return;
+    setTimeout(() => {
+      if (isField(document.activeElement)) return;
+      document.documentElement.classList.remove("typing");
+      window.scrollTo(window.scrollX, window.scrollY); // força o iOS a recalcular as posições fixas
+    }, 80);
+  });
+  if (window.visualViewport) visualViewport.addEventListener("resize", () => {
+    if (visualViewport.height >= window.innerHeight * 0.9 && !isField(document.activeElement)) { document.documentElement.classList.remove("typing"); window.scrollTo(window.scrollX, window.scrollY); }
+  });
+
   // ---------- tema ----------
   const mqDark = window.matchMedia("(prefers-color-scheme: dark)");
   const themePref = () => { try { return JSON.parse(localStorage.getItem("lc:theme")) || "auto"; } catch (e) { return "auto"; } };

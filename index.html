@@ -701,8 +701,9 @@ html.privacy .story-card .v { filter: blur(10px); }
         </div>
         <div class="two">
           <label class="field"><span>A loja parcela em até</span><input id="plMaxN" class="lock-text" inputmode="numeric" maxlength="2" placeholder="10"></label>
-          <div class="field"><span>É…</span><div class="seg" id="plNeed" role="group"><button type="button" data-need="1" aria-pressed="false">Necessidade</button><button type="button" data-need="0" aria-pressed="true">Desejo</button></div></div>
+          <label class="field" id="plSplitRow"><span id="plSplitLbl">Parte do Renan (%)</span><input id="plSplit" class="lock-text" inputmode="numeric" maxlength="3" placeholder="0"></label>
         </div>
+        <div class="field"><span>É…</span><div class="seg" id="plNeed" role="group"><button type="button" data-need="1" aria-pressed="false">Necessidade</button><button type="button" data-need="0" aria-pressed="true">Desejo</button></div></div>
         <details class="how"><summary>Regras do conselho</summary>
           <div class="two" style="margin-top:8px">
             <label class="field"><span>Parcela até % da sobra</span><input id="plPct" class="lock-text" inputmode="numeric" maxlength="2"></label>
@@ -1635,7 +1636,7 @@ html.privacy .story-card .v { filter: blur(10px); }
   // ---------- planejador de compra: entrada + parcelas que cabem na sobra, na reserva e no limite ----------
   const plan = { last: null };
   function planCfg() { const p = state.settings.planRules || {}; return { pct: p.pct ?? 30, months: p.months ?? 3 }; }
-  $("tabPlan").addEventListener("click", () => { const c = planCfg(); $("plPct").value = c.pct; $("plMonths").value = c.months; });
+  $("tabPlan").addEventListener("click", () => { const c = planCfg(); $("plPct").value = c.pct; $("plMonths").value = c.months; $("plSplitRow").hidden = !hasPartner(); $("plSplitLbl").textContent = `Parte de ${P()} (%)`; });
   $("plGo").addEventListener("click", () => runPlan(true));
   $("plNeed").addEventListener("click", (e) => { const b = e.target.closest("[data-need]"); if (!b) return; $("plNeed").querySelectorAll("[data-need]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); });
   // juros mensais embutidos num parcelado de n vezes (primeira parcela no mês seguinte)
@@ -1652,9 +1653,12 @@ html.privacy .story-card .v { filter: blur(10px); }
       const pct = Math.max(5, Math.min(80, parseInt($("plPct").value, 10) || 30)), months = Math.max(0, Math.min(24, parseInt($("plMonths").value, 10) || 0));
       if (store && (pct !== planCfg().pct || months !== planCfg().months)) store.putSettings({ ...state.settings, planRules: { pct, months } });
       const need = $("plNeed").querySelector('[aria-pressed="true"]').dataset.need === "1", maxN = Math.max(1, Math.min(24, parseInt($("plMaxN").value, 10) || 10));
-      plan.last = { desc: $("plDesc").value.trim() || "a compra", price: Math.round(price), total: tot > price ? Math.round(tot) : null, pct, months, need, maxN };
+      const split = hasPartner() ? Math.max(0, Math.min(95, parseInt($("plSplit").value, 10) || 0)) : 0;
+      plan.last = { desc: $("plDesc").value.trim() || "a compra", price: Math.round(price), total: tot > price ? Math.round(tot) : null, pct, months, need, maxN, split };
     }
     const P0 = plan.last; if (!P0) return;
+    // compra dividida: a conta (sobra, reserva, parcela) usa só a sua parte; o cartão é ocupado pelo valor inteiro
+    const m = 1 - (P0.split || 0) / 100, PR = Math.round(P0.price * m), TOT = P0.total ? Math.round(P0.total * m) : null;
     // sobra média só dos meses que já têm salário lançado (meses vazios puxariam a média para baixo)
     const N0 = shiftMonth(salaryMonthOf(today0()), 1), rows = overview(N0), withInc = rows.slice(0, 6).filter(r => !r.noIncome), next6 = withInc.length ? withInc : rows.slice(0, 1);
     const sobra = Math.max(0, Math.round(next6.reduce((a, r) => a + r.sobra, 0) / next6.length));
@@ -1662,46 +1666,47 @@ html.privacy .story-card .v { filter: blur(10px); }
     const res = reserveBalance() || 0, resMin = gastoMes * P0.months, entradaMax = Math.max(0, res - resMin);
     const parcMax = Math.floor(sobra * P0.pct / 100);
     const cards = limitCards().map(c => ({ c, u: cardUse(c) })).sort((a, b) => b.u.free - a.u.free);
-    const fin = P0.total ? P0.total / P0.price : 1; // juros: o parcelado custa "fin" vezes o preço
+    const fin = TOT ? TOT / PR : 1; // juros: o parcelado custa "fin" vezes o preço
     // conselho: entrada de ~30% (o que couber acima da reserva mínima) e o resto no menor número de parcelas que caiba na sobra
     let best = null;
     const r10 = (x) => Math.ceil(x / 1000) * 1000;
-    if (P0.price <= parcMax) best = { c: null, n: 0, ent: P0.price, parc: 0, fin_total: 0, fromSobra: true };
+    if (PR <= parcMax) best = { c: null, n: 0, ent: PR, parc: 0, fin_total: 0, fromSobra: true };
     else {
-      let ent = Math.min(entradaMax, r10(P0.price * 0.3));
-      let n = Math.max(1, Math.ceil((P0.price - ent) * fin / Math.max(1, parcMax)));
+      let ent = Math.min(entradaMax, r10(PR * 0.3));
+      let n = Math.max(1, Math.ceil((PR - ent) * fin / Math.max(1, parcMax)));
       const NM = Math.min(12, P0.maxN || 12);
-      if (n > NM) { ent = Math.min(entradaMax, r10(P0.price - parcMax * NM / fin)); n = Math.ceil((P0.price - ent) * fin / Math.max(1, parcMax)); }
+      if (n > NM) { ent = Math.min(entradaMax, r10(PR - parcMax * NM / fin)); n = Math.ceil((PR - ent) * fin / Math.max(1, parcMax)); }
       if (n <= NM && parcMax > 0) {
-        const fin_total = Math.round((P0.price - ent) * fin), card = cards.find(x => x.u.limit && fin_total <= x.u.free);
+        const fin_total = Math.round((PR - ent) * fin), card = cards.find(x => x.u.limit && fin_total / Math.max(0.01, m) <= x.u.free);
         if (card) best = { c: card.c, n, ent, parc: Math.ceil(fin_total / n), fin_total };
       }
     }
-    const aVistaReserva = P0.price <= entradaMax;
+    const aVistaReserva = PR <= entradaMax;
     // opiniões de "mestre": juros do parcelado x rendimento da reserva, desejo x necessidade e momento da compra
     const master = [], yieldNet = Math.pow(1 + yearRate(), 1 / 12) - 1, ynet = yieldNet * (1 - 0.175);
-    const nLoja = Math.max(2, P0.maxN || 10), rLoja = impliedRate(P0.price, P0.total, nLoja);
-    if (P0.total) {
+    const nLoja = Math.max(2, P0.maxN || 10), rLoja = impliedRate(PR, TOT, nLoja);
+    if (TOT) {
       master.push(rLoja > ynet
-        ? `O parcelado embute ${(rLoja * 100).toFixed(2).replace(".", ",")}% ao mês de juros, mais do que a reserva rende (${(ynet * 100).toFixed(2).replace(".", ",")}% ao mês já sem IR). ${aVistaReserva ? "<b>Pague à vista com a reserva</b>" : parcMax ? `<b>Vale mais juntar ${Math.ceil(Math.max(0, P0.price - entradaMax) / parcMax)} ${Math.ceil(Math.max(0, P0.price - entradaMax) / parcMax) === 1 ? "mês" : "meses"} e pagar à vista</b>` : "<b>Se puder, pague à vista</b>"}: economiza ${fmt(P0.total - P0.price)}.`
+        ? `O parcelado embute ${(rLoja * 100).toFixed(2).replace(".", ",")}% ao mês de juros, mais do que a reserva rende (${(ynet * 100).toFixed(2).replace(".", ",")}% ao mês já sem IR). ${aVistaReserva ? "<b>Pague à vista com a reserva</b>" : parcMax ? `<b>Vale mais juntar ${Math.ceil(Math.max(0, PR - entradaMax) / parcMax)} ${Math.ceil(Math.max(0, PR - entradaMax) / parcMax) === 1 ? "mês" : "meses"} e pagar à vista</b>` : "<b>Se puder, pague à vista</b>"}: economiza ${fmt(TOT - PR)}.`
         : `Os juros do parcelado (${(rLoja * 100).toFixed(2).replace(".", ",")}% ao mês) são menores que o rendimento da reserva: parcelar e deixar o dinheiro rendendo compensa.`);
     } else if (best && best.n > 1) master.push(`Parcelado sem juros: o dinheiro que fica na reserva continua rendendo (${(ynet * 100).toFixed(2).replace(".", ",")}% ao mês sem IR). Só vale se a parcela não apertar o mês, como aqui.`);
     const mesesRes = res / Math.max(1, gastoMes);
     if (!P0.need && mesesRes < 3) master.push(`É um desejo e a reserva cobre só ${mesesRes.toFixed(1).replace(".", ",")} meses de gastos. O conselho clássico: primeiro completar 3 meses de reserva, depois comprar.`);
-    if (!P0.need && P0.price > sobra) master.push("Para desejos maiores que a sua sobra do mês, espere 30 dias antes de comprar: se a vontade continuar, a compra é consciente.");
-    if (P0.need && mesesRes >= 3 && P0.price <= entradaMax) master.push("Como é uma necessidade e a reserva está saudável, usar parte dela é aceitável. Depois, recomponha com o \"Guardar no mês\".");
-    const mesesJuntar = parcMax ? Math.ceil(Math.max(0, P0.price - entradaMax) / parcMax) : null;
+    if (!P0.need && PR > sobra) master.push("Para desejos maiores que a sua sobra do mês, espere 30 dias antes de comprar: se a vontade continuar, a compra é consciente.");
+    if (P0.need && mesesRes >= 3 && PR <= entradaMax) master.push("Como é uma necessidade e a reserva está saudável, usar parte dela é aceitável. Depois, recomponha com o \"Guardar no mês\".");
+    const mesesJuntar = parcMax ? Math.ceil(Math.max(0, PR - entradaMax) / parcMax) : null;
     const ends = endingInstallments(N0);
     let h = `<div class="plan-ctx"><div><span>Sobra média</span><b class="num">${kfmt(sobra)}/mês</b></div><div><span>Parcela máxima</span><b class="num">${kfmt(parcMax)}</b></div><div><span>Pode sair da reserva</span><b class="num">${kfmt(entradaMax)}</b></div></div>
       <p class="hint">Reserva hoje ${kfmt(res)} · mínimo de segurança ${kfmt(resMin)} (${P0.months} ${P0.months === 1 ? "mês" : "meses"} de gastos de ${kfmt(gastoMes)}).</p>`;
     if (best) {
       h += `<div class="plan-best"><span class="tk">Recomendado para ${esc(P0.desc)}</span>
-        <b>${best.fromSobra ? `Pague à vista com a sobra do mês (${fmt(P0.price)})` : `${best.ent ? `${fmt(best.ent)} de entrada + ` : ""}${best.n === 1 ? `${fmt(best.fin_total)} no ${esc(best.c.name)} (1x)` : `${best.n}x de ${fmt(best.parc)} no ${esc(best.c.name)}`}`}</b>
+        <b>${best.fromSobra ? `Pague à vista com a sobra do mês (${fmt(PR)})` : `${best.ent ? `${fmt(Math.round(best.ent / m))} de entrada + ` : ""}${best.n === 1 ? `${fmt(Math.round(best.fin_total / m))} no ${esc(best.c.name)} (1x)` : `${best.n}x de ${fmt(Math.ceil(best.parc / m))} no ${esc(best.c.name)}`}`}</b>
+        ${P0.split ? `<span class="hint">Dividido com ${esc(P())} (${P0.split}% dele): ${best.fromSobra ? `a sua parte é ${fmt(PR)}` : `a sua parte é ${best.ent ? `${fmt(best.ent)} de entrada e ` : ""}${best.n}x de ${fmt(best.parc)}; ${esc(P())} te passa ${best.ent ? `${fmt(Math.round(best.ent / m) - best.ent)} da entrada e ` : ""}${fmt(Math.ceil(best.parc / m) - best.parc)} por mês`}.</span>` : ""}
         <ul>
           ${best.fromSobra ? `<li>Cabe na sua sobra média de ${kfmt(sobra)} sem parcelar nem mexer na reserva.</li>` : `
           <li>A parcela é ${Math.round(best.parc / Math.max(1, sobra) * 100)}% da sua sobra média, dentro do limite de ${P0.pct}%: o dia a dia não aperta.</li>
-          ${best.ent ? `<li>A entrada (${Math.round(best.ent / P0.price * 100)}% do preço) sai da reserva, que fica em ${kfmt(res - best.ent)}, acima do mínimo de segurança.</li>` : `<li>Sem entrada: a reserva fica intacta.</li>`}
-          <li>Cabe no limite do ${esc(best.c.name)}: sobram ${kfmt(cardUse(best.c).free - best.fin_total)} livres.</li>`}
+          ${best.ent ? `<li>A entrada (${Math.round(best.ent / PR * 100)}% do preço) sai da reserva, que fica em ${kfmt(res - best.ent)}, acima do mínimo de segurança.</li>` : `<li>Sem entrada: a reserva fica intacta.</li>`}
+          <li>Cabe no limite do ${esc(best.c.name)}${P0.split ? " (o cartão é ocupado pelo valor inteiro)" : ""}: sobram ${kfmt(cardUse(best.c).free - Math.round(best.fin_total / m))} livres.</li>`}
           ${master.map(t => `<li>${t}</li>`).join("")}
           ${ends.length ? `<li>Em ${mName(ends[0].last)} acabam outras parcelas (+${kfmt(ends[0].total)}/mês): a partir daí sobra mais folga.</li>` : ""}
         </ul></div>`;
@@ -1710,13 +1715,13 @@ html.privacy .story-card .v { filter: blur(10px); }
       if (!cards.some(x => x.u.limit)) h += `<p class="hint">Dica: preencha o limite dos cartões aqui embaixo para o app considerar parcelar.</p>`;
     }
     h += `<div class="rc-sec"><h3>Outras opções</h3>`;
-    h += `<div class="rc-row"><span class="dchip">🐷</span><div><div class="name">Usar só a reserva</div><div class="meta">${aVistaReserva ? `dá: a reserva fica em ${kfmt(res - P0.price)}` : `faltariam ${kfmt(P0.price - entradaMax)} acima do mínimo de segurança`}</div></div><span class="val">${aVistaReserva ? "✓" : "✗"}</span></div>`;
+    h += `<div class="rc-row"><span class="dchip">🐷</span><div><div class="name">Usar só a reserva</div><div class="meta">${aVistaReserva ? `dá: a reserva fica em ${kfmt(res - PR)}` : `faltariam ${kfmt(PR - entradaMax)} acima do mínimo de segurança`}</div></div><span class="val">${aVistaReserva ? "✓" : "✗"}</span></div>`;
     h += `<div class="rc-row"><span class="dchip">📅</span><div><div class="name">Juntar e comprar à vista</div><div class="meta">${mesesJuntar == null ? "sem sobra para juntar" : mesesJuntar === 0 ? "já dá hoje" : `guardando ${kfmt(parcMax)} por mês, em ${mesesJuntar} ${mesesJuntar === 1 ? "mês" : "meses"} (${mName(shiftMonth(N0, mesesJuntar))})`}</div></div><span class="val">${mesesJuntar != null && mesesJuntar <= 6 ? "✓" : "…"}</span></div>`;
-    const worst = cards.find(x => x.u.limit) && (() => { const { c, u } = cards[cards.length - 1]; const p12 = Math.ceil(P0.price * fin / 12); return `<div class="rc-row"><span class="dchip">⚠️</span><div><div class="name">Evite: 12x de ${fmt(p12)} no ${esc(c.name)}</div><div class="meta">${P0.price * fin > u.free ? "não cabe no limite e " : ""}prende o cartão por um ano</div></div><span class="val">✗</span></div>`; })();
+    const worst = cards.find(x => x.u.limit) && (() => { const { c, u } = cards[cards.length - 1]; const p12 = Math.ceil(PR * fin / 12); return `<div class="rc-row"><span class="dchip">⚠️</span><div><div class="name">Evite: 12x de ${fmt(p12)} no ${esc(c.name)}</div><div class="meta">${PR * fin > u.free ? "não cabe no limite e " : ""}prende o cartão por um ano</div></div><span class="val">✗</span></div>`; })();
     if (worst) h += worst;
     h += `</div>`;
     // sobra mês a mês com a compra
-    const impact = rows.map((r, k) => ({ r, after: r.sobra - (best && best.fromSobra && k === 0 ? P0.price : best && k < best.n ? best.parc : 0) }));
+    const impact = rows.map((r, k) => ({ r, after: r.sobra - (best && best.fromSobra && k === 0 ? PR : best && k < best.n ? best.parc : 0) }));
     const mx = Math.max(1, ...impact.map(x => Math.abs(x.r.sobra)), ...impact.map(x => Math.abs(x.after)));
     h += `<div class="rc-sec"><h3>Sua sobra com a compra</h3><div class="plan-chart">${impact.map(({ r, after }) => `<div class="pc-col" title="${monthOnly(r.N)}: ${fmt(after)}"><span class="pc-bar" style="height:${Math.max(3, Math.abs(r.sobra) / mx * 70)}px"></span><span class="pc-bar now${after < 0 ? " neg" : ""}" style="height:${Math.max(3, Math.abs(after) / mx * 70)}px"></span><small>${monthOnly(r.N).slice(0, 3)}</small></div>`).join("")}</div>
       <p class="hint"><b class="dot" style="background:var(--neutral)"></b> sem a compra &nbsp;<b class="dot" style="background:var(--accent)"></b> com a compra</p></div>`;

@@ -533,6 +533,18 @@ dialog.ask .rep { text-align: center; }
 .lim-bar i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--ring-a), var(--ring-b)); transition: width .8s var(--ease); }
 .lim-bar.warn i { background: var(--warn); } .lim-bar.bad i { background: var(--out); }
 .lim-meta { font-size: var(--fs-xs); color: var(--muted); }
+#plNeed button { font-size: var(--fs-sm); padding: 9px 2px; }
+.diag { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.diag:last-child { border-bottom: 0; }
+.diag b { font-size: var(--fs-md); }
+.diag p { margin: 2px 0 0; font-size: var(--fs-sm); color: var(--muted); line-height: 1.45; }
+.dg-ic { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: var(--fs-sm); color: #fff; background: var(--in); margin-top: 1px; }
+.diag.warn .dg-ic { background: var(--warn); } .diag.bad .dg-ic { background: var(--out); } .diag.info .dg-ic { background: var(--neutral); }
+.score { font-size: var(--fs-xs); font-weight: 700; padding: 4px 10px; border-radius: 99px; color: #fff; background: var(--in); }
+.score.warn { background: var(--warn); } .score.bad { background: var(--out); }
+.sources ul { margin: 8px 0; padding-left: 18px; display: grid; gap: 8px; font-size: var(--fs-sm); line-height: 1.45; }
+.sources a { color: var(--accent); font-weight: 600; }
+.sources { padding: 12px 0; }
 /* conferir fatura */
 .rc-sum { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .rc-sum > div { background: var(--sheet-2); border-radius: 12px; padding: 10px 12px; display: grid; gap: 2px; }
@@ -675,13 +687,21 @@ html.privacy .story-card .v { filter: blur(10px); }
   </div>
 
   <div id="viewPlan" class="stack" hidden>
+    <section class="block" aria-labelledby="hDiag">
+      <div class="block-head"><h2 id="hDiag">Seu diagnóstico</h2><span class="tot num" id="diagScore"></span></div>
+      <div id="diagBox"></div>
+    </section>
     <section class="block" aria-labelledby="hPlanForm">
       <div class="block-head"><h2 id="hPlanForm">O que você quer comprar?</h2></div>
       <div class="plan-form">
         <label class="field"><span>O que é</span><input id="plDesc" class="lock-text" placeholder="Ex.: Celular novo" autocomplete="off"></label>
         <div class="two">
           <label class="field"><span>Preço à vista</span><span class="money"><b>R$</b><input id="plPrice" class="lock-text" inputmode="decimal" placeholder="0,00" autocomplete="off"></span></label>
-          <label class="field"><span>Total se parcelar <small>(se tiver juros)</small></span><span class="money"><b>R$</b><input id="plTotal" class="lock-text" inputmode="decimal" placeholder="igual" autocomplete="off"></span></label>
+          <label class="field"><span>Total parcelado <small>(se for mais caro)</small></span><span class="money"><b>R$</b><input id="plTotal" class="lock-text" inputmode="decimal" placeholder="igual" autocomplete="off"></span></label>
+        </div>
+        <div class="two">
+          <label class="field"><span>A loja parcela em até</span><input id="plMaxN" class="lock-text" inputmode="numeric" maxlength="2" placeholder="10"></label>
+          <div class="field"><span>É…</span><div class="seg" id="plNeed" role="group"><button type="button" data-need="1" aria-pressed="false">Necessidade</button><button type="button" data-need="0" aria-pressed="true">Desejo</button></div></div>
         </div>
         <details class="how"><summary>Regras do conselho</summary>
           <div class="two" style="margin-top:8px">
@@ -700,6 +720,20 @@ html.privacy .story-card .v { filter: blur(10px); }
     <section class="block" aria-labelledby="hLimits">
       <div class="block-head"><h2 id="hLimits">Limite dos cartões</h2></div>
       <div id="limitsBox"></div>
+    </section>
+    <section class="block" aria-labelledby="hSources">
+      <div class="block-head"><h2 id="hSources">Como o app pensa</h2></div>
+      <div class="sources">
+        <p class="hint">As opiniões seguem regras clássicas de planejamento financeiro, aplicadas aos seus números:</p>
+        <ul>
+          <li><b>Reserva de emergência de 3 a 6 meses</b> do custo de vida; 12 meses é a referência mais prudente. <a href="https://www.gov.br/investidor/pt-br/educacional/publicacoes-educacionais/guias/guia-de-planejamento-financeiro/guia-planejamento-financeiro.pdf/@@download/file" target="_blank" rel="noopener">Guia de Planejamento Financeiro (CVM)</a></li>
+          <li><b>Dívidas e parcelas até 30% da renda</b>; a partir de 40% o Banco Central passa a exigir alertas de crédito em 2027. <a href="https://www.serasa.com.br/credito/blog/comprometimento-renda/" target="_blank" rel="noopener">Serasa</a> · <a href="https://consumidormoderno.com.br/novas-regras-credito-banco-central-2027/" target="_blank" rel="noopener">Novas regras do BC</a></li>
+          <li><b>Regra 50/30/20:</b> 50% necessidades, 30% desejos, 20% poupança. <a href="https://www.acorns.com/learn/saving/50-30-20-budget-rule/" target="_blank" rel="noopener">Elizabeth Warren, "All Your Worth"</a></li>
+          <li><b>Necessidade x desejo, sonhos com prazo e consumo planejado.</b> <a href="https://www.bcb.gov.br/pre/pef/port/caderno_cidadania_financeira.pdf" target="_blank" rel="noopener">Caderno de Educação Financeira do Banco Central</a></li>
+          <li><b>À vista com desconto x parcelado:</b> compara os juros embutidos no parcelado com o que o seu dinheiro rende na reserva (CDI, já sem IR).</li>
+        </ul>
+        <p class="hint">É uma orientação automática, não substitui um planejador financeiro certificado.</p>
+      </div>
     </section>
   </div>
 
@@ -871,7 +905,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     </div>
     <label class="field" id="rowRepeat" hidden><span id="repeatLbl">Repetir por quantos meses</span><input id="fRepeat" inputmode="numeric" value="1" maxlength="2" aria-describedby="repeatHint"><small class="hint" id="repeatHint"></small></label>
     <div class="field" id="rowSplit"><span class="flabel" id="splitLbl">Dividir</span>
-      <div class="chips" id="fSplit"><button type="button" data-split="0" aria-pressed="true">Não</button><button type="button" data-split="half" aria-pressed="false">Metade</button><button type="button" data-split="all" aria-pressed="false" id="splitAll">É tudo da pessoa</button></div>
+      <div class="chips" id="fSplit"><button type="button" data-split="0" aria-pressed="true">Não</button><button type="button" data-split="half" aria-pressed="false">Metade</button><button type="button" data-split="all" aria-pressed="false" id="splitAll">É tudo da pessoa</button><button type="button" data-split="pct" aria-pressed="false">Outra %</button></div>
+      <label class="close-row" id="splitPctRow" hidden><span id="splitPctLbl">Parte da outra pessoa</span><span><input id="fSplitPct" inputmode="numeric" maxlength="3" aria-label="Porcentagem da outra pessoa"> %</span></label>
     </div>
     <p class="where" id="fWhere"></p>
     <p class="msg" id="fMsg" role="alert"></p>
@@ -1102,7 +1137,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("title").innerHTML = state.view === "year" ? "12 meses" : state.view === "arch" ? "Anos" : state.view === "partner" ? esc(P()) : state.view === "plan" ? "Planejar" : `${monthOnly(v.N).replace(/^./, c => c.toUpperCase())} <span class="yr">${v.N.slice(0, 4)}</span>`;
     if (state.view === "year") { renderYear(); renderEnds(); }
     if (state.view === "arch") renderArch();
-    if (state.view === "plan") { renderLimits(); if (plan.last) runPlan(false); }
+    if (state.view === "plan") { renderDiag(); renderLimits(); if (plan.last) runPlan(false); }
 
     // sobra
     const living = t0 >= v.payday && t0 < v.next, future = t0 < v.payday;
@@ -1126,7 +1161,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     // linha com etiqueta de data, divisão e valor inteiro (fatura e débito/PIX)
     const dateRow = (i, ym, d, today) => {
       const tag = d ? `<span class="dchip"><b>${pad(d.getDate())}</b>${MES3[d.getMonth()]}</span>` : `<span class="dchip none">${i.inst ? "parc." : "mensal"}</span>`;
-      const mine = i.amount - (i.renan || 0), split = i.renan ? (i.renan >= i.amount ? `tudo de ${P()}` : Math.abs(i.renan * 2 - i.amount) <= 1 ? `metade com ${P()}` : `parte com ${P()}`) : "";
+      const mine = i.amount - (i.renan || 0), split = i.renan ? (i.renan >= i.amount ? `tudo de ${P()}` : Math.abs(i.renan * 2 - i.amount) <= 1 ? `metade com ${P()}` : `${Math.round(i.renan / i.amount * 100)}% de ${P()}`) : "";
       const pills = [split ? `<span class="fpill${mine ? "" : " all"}">${esc(split)}</span>` : "", today && d && d > today ? `<span class="fpill all">previsto</span>` : ""].join("");
       return `<div class="line nocheck tap frow" data-edit="${ym}|${i.id}">${tag}
         <div class="fdesc"><div class="name">${esc(i.desc)}${i.inst ? ` <small>${esc(i.inst)}</small>` : ""}</div>${pills ? `<span class="fpills">${pills}</span>` : ""}</div>
@@ -1205,7 +1240,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     const L = renanLedger();
     countTo($("owed"), Math.max(0, L.total));
     $("owedSub").textContent = L.total < 0 ? `${P()} te pagou ${fmt(-L.total)} a mais.` : L.pending.length ? `${L.pending.length} ${L.pending.length === 1 ? "conta pendente" : "contas pendentes"}. Marque o quadradinho quando ${esc(P())} pagar.` : "Nada pendente.";
-    const share = (i) => i.renan === i.amount ? `tudo de ${P()}, de ${fmt(i.amount)}` : i.renan === Math.round(i.amount / 2) ? `metade de ${fmt(i.amount)}` : `parte de ${fmt(i.amount)}`;
+    const share = (i) => i.renan === i.amount ? `tudo de ${P()}, de ${fmt(i.amount)}` : i.renan === Math.round(i.amount / 2) ? `metade de ${fmt(i.amount)}` : `${Math.round(i.renan / i.amount * 100)}% de ${fmt(i.amount)}`;
     const line = ({ i, d, ym, left }) => `<div class="line nocheck tap" data-edit="${ym}|${i.id}"><div><div class="name">${ddmm(d)} · ${esc(i.desc)}</div><div class="meta">${left != null && left < i.renan ? `falta ${fmt(left)} · ` : ""}${share(i)}</div></div><span class="val num">${fmt(left != null ? left : i.renan)}</span></div>`;
     const group = (key, title, list, body) => !list.length ? "" : `<div class="line nocheck tap" data-toggle="${key}"><div class="name">${title}</div><span class="meta">${state.open[key] ? "fechar" : "ver"}</span></div>${state.open[key] ? `<div class="sublist">${body}</div>` : ""}`;
     const tickLine = ({ i, d, ym, left }) => `<div class="line${i.renanPaid ? " done" : ""}"><button type="button" class="tick" role="checkbox" aria-checked="${!!i.renanPaid}" aria-label="${esc(P())} pagou ${esc(i.desc)}" data-rpaid="${ym}|${i.id}">${i.renanPaid ? "✓" : ""}</button>
@@ -1558,18 +1593,66 @@ html.privacy .story-card .v { filter: blur(10px); }
     const v = parseAmount(raw); if (v > 0) { await saveCardField(c.id, { limit: Math.round(v) }); toast("Limite salvo."); }
   });
 
+  // ---------- diagnóstico: as regras clássicas aplicadas ao mês atual ----------
+  const NEED_RE = /moradia|aluguel|condom|mercado|supermerc|sa[uú]de|farm|rem[eé]dio|educa|faculd|escola|transporte|combust|gasolina|uber|[oô]nibus|celular|internet|luz|energia|[aá]gua|g[aá]s|seguro|pet|ra[cç][aã]o|plano/i;
+  const isNeed = (i) => NEED_RE.test((i.cat || "") + " " + i.desc);
+  function diagnose() {
+    const N0 = shiftMonth(salaryMonthOf(today0()), 1), v = monthView(N0), renda = v.totIn + full(v.taken);
+    const out = [];
+    if (!renda) return { out: [{ st: "info", t: "Sem salário lançado", d: "Lance o salário do mês para o app avaliar a sua saúde financeira." }], score: null };
+    const all = [...Object.values(v.cards).flat(), ...v.bills.map(x => x[0]), ...v.daily], mine = (i) => Math.max(0, i.amount - (i.renan || 0));
+    const pc = (x) => Math.round(x / renda * 100);
+    // 1) poupança (meta 20%)
+    const poup = full(v.saved) + v.planLeft, tp = pc(poup);
+    out.push({ k: "poup", st: tp >= 20 ? "ok" : tp >= 10 ? "warn" : "bad", t: `Você guarda ${tp}% da renda`, d: tp >= 20 ? "Acima dos 20% recomendados. Excelente disciplina." : `O ideal é 20% (${kfmt(Math.round(renda * 0.2))}). ${tp ? `Faltam ${kfmt(Math.round(renda * 0.2) - poup)} por mês.` : "Comece com um valor fixo no bloco \"Guardar no mês\", mesmo pequeno: o hábito vale mais que o valor."}` });
+    // 2) parcelas e dívidas (até 30%)
+    const parc = all.filter(i => i.inst).reduce((a, i) => a + mine(i), 0), tparc = pc(parc);
+    out.push({ k: "parc", st: tparc <= 30 ? "ok" : tparc <= 40 ? "warn" : "bad", t: `Parcelas comprometem ${tparc}% da renda`, d: tparc <= 15 ? "Folga boa para imprevistos." : tparc <= 30 ? "Dentro do limite saudável de 30%. Evite novas parcelas longas até algumas acabarem." : tparc <= 40 ? "Acima dos 30% recomendados. Segure compras parceladas até as atuais terminarem." : "Acima de 40%: zona de risco. Priorize quitar parcelas e não assuma novas." });
+    // 3) necessidades x desejos (50/30)
+    const need = all.filter(isNeed).reduce((a, i) => a + mine(i), 0), want = all.filter(i => !isNeed(i)).reduce((a, i) => a + mine(i), 0);
+    const tn = pc(need), tw = pc(want);
+    out.push({ k: "5030", st: tn <= 50 && tw <= 30 ? "ok" : tn <= 60 && tw <= 35 ? "warn" : "bad", t: `Necessidades ${tn}% · desejos ${tw}%`, d: tw > 30 ? `Desejos passaram dos 30% (${kfmt(want)}). É onde está a maior chance de economia.` : tn > 50 ? "As necessidades passam de 50%: vale renegociar contas fixas (plano de celular, internet, seguros)." : "Equilíbrio dentro da regra 50/30/20." });
+    // 4) reserva de emergência (3 a 6 meses)
+    const rows = overview(N0), custo = Math.max(1, Math.round(rows.slice(0, 3).reduce((a, r) => a + r.gasta, 0) / 3)), res = reserveBalance() || 0, meses = res / custo;
+    out.push({ k: "res", st: meses >= 6 ? "ok" : meses >= 3 ? "ok" : meses >= 1 ? "warn" : "bad", t: `A reserva cobre ${meses.toFixed(1).replace(".", ",")} ${meses >= 1 && meses < 2 ? "mês" : "meses"}`, d: meses >= 6 ? "Reserva sólida. O que passar de 6 meses pode ir para objetivos de médio prazo." : meses >= 3 ? `Dentro do recomendado (3 a 6 meses). Para chegar a 6, faltam ${kfmt(Math.round(custo * 6 - res))}.` : `Abaixo do mínimo de 3 meses (${kfmt(custo * 3)}). Antes de compras grandes, priorize completar a reserva.` });
+    // 5) gasto que cresceu (desperdício)
+    const byCat = (vw) => { const m = {}; [...Object.values(vw.cards).flat(), ...vw.bills.map(x => x[0]), ...vw.daily].forEach(i => { if (i.kind === "var") { const c = i.cat || "Outros"; m[c] = (m[c] || 0) + mine(i); } }); return m; };
+    const now = byCat(v), prev = [1, 2, 3].map(k => byCat(monthView(shiftMonth(N0, -k))));
+    let worst = null;
+    for (const [c, x] of Object.entries(now)) { const avg = prev.reduce((a, m) => a + (m[c] || 0), 0) / 3; if (avg > 2000 && x > avg * 1.3 && (!worst || x - avg > worst.diff)) worst = { c, x, avg, diff: x - avg }; }
+    if (worst) out.push({ k: "trend", st: "warn", t: `${worst.c} subiu ${Math.round((worst.x / worst.avg - 1) * 100)}%`, d: `${kfmt(worst.x)} neste mês, contra média de ${kfmt(Math.round(worst.avg))} nos 3 anteriores. Vale olhar com carinho.` });
+    // 6) limite dos cartões
+    for (const c of limitCards()) { const u = cardUse(c); if (u.limit && u.used / u.limit > 0.8) out.push({ k: "lim" + c.id, st: "warn", t: `${c.name} com ${Math.round(u.used / u.limit * 100)}% do limite usado`, d: "Perto do limite, uma emergência pode não passar no cartão. Evite novas compras nele até a fatura virar." }); }
+    const pts = out.map(o => o.st === "ok" ? 100 : o.st === "warn" ? 55 : 15), score = Math.round(pts.reduce((a, b) => a + b, 0) / pts.length);
+    return { out, score, renda, parc, poup, res, custo };
+  }
+  function renderDiag() {
+    const { out, score } = diagnose();
+    $("diagScore").innerHTML = score == null ? "" : `<span class="score ${score >= 75 ? "ok" : score >= 50 ? "warn" : "bad"}">${score >= 75 ? "Saudável" : score >= 50 ? "Atenção" : "Cuidado"} · ${score}</span>`;
+    $("diagBox").innerHTML = out.map(o => `<div class="diag ${o.st}"><span class="dg-ic">${o.st === "ok" ? "✓" : o.st === "warn" ? "!" : o.st === "bad" ? "✕" : "i"}</span><div><b>${esc(o.t)}</b><p>${esc(o.d)}</p></div></div>`).join("");
+  }
+
   // ---------- planejador de compra: entrada + parcelas que cabem na sobra, na reserva e no limite ----------
   const plan = { last: null };
   function planCfg() { const p = state.settings.planRules || {}; return { pct: p.pct ?? 30, months: p.months ?? 3 }; }
   $("tabPlan").addEventListener("click", () => { const c = planCfg(); $("plPct").value = c.pct; $("plMonths").value = c.months; });
   $("plGo").addEventListener("click", () => runPlan(true));
+  $("plNeed").addEventListener("click", (e) => { const b = e.target.closest("[data-need]"); if (!b) return; $("plNeed").querySelectorAll("[data-need]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); });
+  // juros mensais embutidos num parcelado de n vezes (primeira parcela no mês seguinte)
+  function impliedRate(price, total, n) {
+    if (!(total > price) || n < 2) return 0;
+    const pmt = total / n; let lo = 0, hi = 0.2;
+    for (let k = 0; k < 60; k++) { const r = (lo + hi) / 2, pv = pmt * (1 - Math.pow(1 + r, -n)) / r; if (pv > price) lo = r; else hi = r; }
+    return (lo + hi) / 2;
+  }
   function runPlan(fromForm) {
     if (fromForm) {
       const price = parseAmount($("plPrice").value), tot = $("plTotal").value.trim() ? parseAmount($("plTotal").value) : null;
       if (!(price > 0)) { toast("Digite o preço."); $("plPrice").focus(); return; }
       const pct = Math.max(5, Math.min(80, parseInt($("plPct").value, 10) || 30)), months = Math.max(0, Math.min(24, parseInt($("plMonths").value, 10) || 0));
       if (store && (pct !== planCfg().pct || months !== planCfg().months)) store.putSettings({ ...state.settings, planRules: { pct, months } });
-      plan.last = { desc: $("plDesc").value.trim() || "a compra", price: Math.round(price), total: tot > price ? Math.round(tot) : null, pct, months };
+      const need = $("plNeed").querySelector('[aria-pressed="true"]').dataset.need === "1", maxN = Math.max(1, Math.min(24, parseInt($("plMaxN").value, 10) || 10));
+      plan.last = { desc: $("plDesc").value.trim() || "a compra", price: Math.round(price), total: tot > price ? Math.round(tot) : null, pct, months, need, maxN };
     }
     const P0 = plan.last; if (!P0) return;
     // sobra média só dos meses que já têm salário lançado (meses vazios puxariam a média para baixo)
@@ -1587,13 +1670,26 @@ html.privacy .story-card .v { filter: blur(10px); }
     else {
       let ent = Math.min(entradaMax, r10(P0.price * 0.3));
       let n = Math.max(1, Math.ceil((P0.price - ent) * fin / Math.max(1, parcMax)));
-      if (n > 12) { ent = Math.min(entradaMax, r10(P0.price - parcMax * 12 / fin)); n = Math.ceil((P0.price - ent) * fin / Math.max(1, parcMax)); }
-      if (n <= 12 && parcMax > 0) {
+      const NM = Math.min(12, P0.maxN || 12);
+      if (n > NM) { ent = Math.min(entradaMax, r10(P0.price - parcMax * NM / fin)); n = Math.ceil((P0.price - ent) * fin / Math.max(1, parcMax)); }
+      if (n <= NM && parcMax > 0) {
         const fin_total = Math.round((P0.price - ent) * fin), card = cards.find(x => x.u.limit && fin_total <= x.u.free);
         if (card) best = { c: card.c, n, ent, parc: Math.ceil(fin_total / n), fin_total };
       }
     }
     const aVistaReserva = P0.price <= entradaMax;
+    // opiniões de "mestre": juros do parcelado x rendimento da reserva, desejo x necessidade e momento da compra
+    const master = [], yieldNet = Math.pow(1 + yearRate(), 1 / 12) - 1, ynet = yieldNet * (1 - 0.175);
+    const nLoja = Math.max(2, P0.maxN || 10), rLoja = impliedRate(P0.price, P0.total, nLoja);
+    if (P0.total) {
+      master.push(rLoja > ynet
+        ? `O parcelado embute ${(rLoja * 100).toFixed(2).replace(".", ",")}% ao mês de juros, mais do que a reserva rende (${(ynet * 100).toFixed(2).replace(".", ",")}% ao mês já sem IR). ${aVistaReserva ? "<b>Pague à vista com a reserva</b>" : parcMax ? `<b>Vale mais juntar ${Math.ceil(Math.max(0, P0.price - entradaMax) / parcMax)} ${Math.ceil(Math.max(0, P0.price - entradaMax) / parcMax) === 1 ? "mês" : "meses"} e pagar à vista</b>` : "<b>Se puder, pague à vista</b>"}: economiza ${fmt(P0.total - P0.price)}.`
+        : `Os juros do parcelado (${(rLoja * 100).toFixed(2).replace(".", ",")}% ao mês) são menores que o rendimento da reserva: parcelar e deixar o dinheiro rendendo compensa.`);
+    } else if (best && best.n > 1) master.push(`Parcelado sem juros: o dinheiro que fica na reserva continua rendendo (${(ynet * 100).toFixed(2).replace(".", ",")}% ao mês sem IR). Só vale se a parcela não apertar o mês, como aqui.`);
+    const mesesRes = res / Math.max(1, gastoMes);
+    if (!P0.need && mesesRes < 3) master.push(`É um desejo e a reserva cobre só ${mesesRes.toFixed(1).replace(".", ",")} meses de gastos. O conselho clássico: primeiro completar 3 meses de reserva, depois comprar.`);
+    if (!P0.need && P0.price > sobra) master.push("Para desejos maiores que a sua sobra do mês, espere 30 dias antes de comprar: se a vontade continuar, a compra é consciente.");
+    if (P0.need && mesesRes >= 3 && P0.price <= entradaMax) master.push("Como é uma necessidade e a reserva está saudável, usar parte dela é aceitável. Depois, recomponha com o \"Guardar no mês\".");
     const mesesJuntar = parcMax ? Math.ceil(Math.max(0, P0.price - entradaMax) / parcMax) : null;
     const ends = endingInstallments(N0);
     let h = `<div class="plan-ctx"><div><span>Sobra média</span><b class="num">${kfmt(sobra)}/mês</b></div><div><span>Parcela máxima</span><b class="num">${kfmt(parcMax)}</b></div><div><span>Pode sair da reserva</span><b class="num">${kfmt(entradaMax)}</b></div></div>
@@ -1606,7 +1702,7 @@ html.privacy .story-card .v { filter: blur(10px); }
           <li>A parcela é ${Math.round(best.parc / Math.max(1, sobra) * 100)}% da sua sobra média, dentro do limite de ${P0.pct}%: o dia a dia não aperta.</li>
           ${best.ent ? `<li>A entrada (${Math.round(best.ent / P0.price * 100)}% do preço) sai da reserva, que fica em ${kfmt(res - best.ent)}, acima do mínimo de segurança.</li>` : `<li>Sem entrada: a reserva fica intacta.</li>`}
           <li>Cabe no limite do ${esc(best.c.name)}: sobram ${kfmt(cardUse(best.c).free - best.fin_total)} livres.</li>`}
-          ${P0.total ? `<li>Parcelado custa ${fmt(P0.total - P0.price)} a mais. ${best.ent ? "Quanto maior a entrada, menos juros." : ""}</li>` : ""}
+          ${master.map(t => `<li>${t}</li>`).join("")}
           ${ends.length ? `<li>Em ${mName(ends[0].last)} acabam outras parcelas (+${kfmt(ends[0].total)}/mês): a partir daí sobra mais folga.</li>` : ""}
         </ul></div>`;
     } else {
@@ -2100,6 +2196,13 @@ html.privacy .story-card .v { filter: blur(10px); }
   $("next").addEventListener("click", () => { state.month = shiftMonth(state.month, 1); state.open = {}; render(); });
 
   // ---------- lançar ----------
+  // divisão de um item: nenhuma, metade, tudo ou outra porcentagem (ex.: 20%)
+  function splitOf(i) {
+    if (!i.renan) return "0";
+    if (i.renan >= i.amount) return "all";
+    if (Math.abs(i.renan * 2 - i.amount) <= 1) return "half";
+    $("fSplitPct").value = Math.round(i.renan / i.amount * 100); return "pct";
+  }
   const form = { kind: "gasto", how: "debito", split: "0", editing: null, editDate: null };
   const HOWS = () => {
     const cards = cardsList().filter(c => !c.partner || hasPartner()).map(c => [c.id, cardLabel(c)]);
@@ -2154,6 +2257,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       ? (form.runLen === 1 ? `Hoje ${what} está só neste mês.` : `Hoje ${what} está em ${form.runLen} meses seguidos a partir deste.`) + " Aumente o número para lançar nos meses seguintes."
       : `1 = só este mês. Com 12, ${what} entra em cada um dos próximos 12 meses.`;
     $("fSplit").querySelectorAll("[data-split]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.split === form.split)));
+    $("splitPctRow").hidden = form.split !== "pct" || $("rowSplit").hidden; $("splitPctLbl").textContent = `Quanto é de ${P()}`;
     $("fDesc").placeholder = form.kind === "entrada" ? "Ex.: Salário" : form.kind === "conta" ? "Ex.: Luz" : "Ex.: Mercado";
     const p = placement();
     $("fWhere").textContent = p ? p.text : "Escolha a data.";
@@ -2216,7 +2320,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("fMsg").textContent = "";
     if (i) {
       form.kind = kindOf(i); form.how = howOf(i);
-      form.split = !i.renan ? "0" : i.renan === i.amount ? "all" : "half";
+      form.split = splitOf(i);
       $("fDesc").value = i.desc; $("fVal").value = toInput(i.amount);
       // sem data guardada, mostra o dia em que ele é pago, sem mudar o lugar
       $("fDate").value = i.day ? `${i.pm || ym}-${pad(i.day)}` : isoOf(i.kind === "var" && !isCard(i) ? new Date(+ym.slice(0, 4), +ym.slice(5) - 1, 1) : lastBizDay(isAdvance(i) ? shiftMonth(ym, -1) : ym));
@@ -2253,13 +2357,13 @@ html.privacy .story-card .v { filter: blur(10px); }
   });
   $("fHow").addEventListener("click", (e) => { const b = e.target.closest("[data-how]"); if (b) { form.how = b.dataset.how; syncForm(); } });
   $("fScope").addEventListener("click", (e) => { const b = e.target.closest("[data-scope]"); if (!b) return; form.scope = b.dataset.scope; $("fScope").querySelectorAll("[data-scope]").forEach(x => x.setAttribute("aria-pressed", String(x === b))); });
-  $("fSplit").addEventListener("click", (e) => { const b = e.target.closest("[data-split]"); if (b) { form.split = b.dataset.split; syncForm(); } });
+  $("fSplit").addEventListener("click", (e) => { const b = e.target.closest("[data-split]"); if (b) { form.split = b.dataset.split; if (form.split === "pct" && !$("fSplitPct").value) $("fSplitPct").value = 50; syncForm(); if (form.split === "pct") $("fSplitPct").focus(); } });
   $("fDate").addEventListener("change", syncForm);
   $("fDesc").addEventListener("change", () => {
     if (form.editing) return;
     const d = $("fDesc").value.trim().toLowerCase();
     const prev = allItems().filter(i => i.desc.toLowerCase() === d && kindOf(i) === form.kind).pop();
-    if (prev) { form.how = howOf(prev); form.split = !prev.renan ? "0" : prev.renan === prev.amount ? "all" : "half"; syncForm(); }
+    if (prev) { form.how = howOf(prev); form.split = splitOf(prev); syncForm(); }
   });
 
   $("form").addEventListener("submit", async (e) => {
@@ -2313,7 +2417,8 @@ html.privacy .story-card .v { filter: blur(10px); }
     let method = kind === "in" ? null : onCard ? cardMethod(form.how) : kind === "fixed" ? "Boleto" : debitMethod();
     // editando sem trocar a forma de pagamento: mantém a original (ex.: "PIX ou Transf.")
     if (form.editing && kind !== "in" && howOf(form.editing.item) === form.how) method = form.editing.item.method;
-    const renan = kind === "in" || !hasPartner() ? 0 : form.split === "all" ? amount : form.split === "half" ? Math.round(amount / 2) : 0;
+    const pctv = Math.max(0, Math.min(100, parseInt($("fSplitPct").value, 10) || 0));
+    const renan = kind === "in" || !hasPartner() ? 0 : form.split === "all" ? amount : form.split === "half" ? Math.round(amount / 2) : form.split === "pct" ? Math.round(amount * pctv / 100) : 0;
     const keep = form.editing && $("fDate").value === form.editDate;
     const base = { kind, desc, amount, method, renan };
     if (!keep) { base.day = p.d.getDate(); base.pm = ymOf(p.d) !== p.ym ? ymOf(p.d) : null; if (kind === "fixed") base.adv = false; }

@@ -1109,11 +1109,26 @@ html.privacy .story-card .v { filter: blur(10px); }
   let store = null;
   const itemsOf = (ym) => state.months[ym] || [];
   const allItems = () => Object.values(state.months).flat();
-  const save = (ym, items) => store ? store.putMonth(ym, items).catch(() => toast("Não foi possível salvar. Verifique a internet.")) : null;
+  const save = (ym, items) => (baseCache.clear(), store) ? store.putMonth(ym, items).catch(() => toast("Não foi possível salvar. Verifique a internet.")) : null;
 
   // ---------- a conta de um mês ----------
   // o mês N é vivido com o salário de M = N − 1: nesse dia saem as faturas de M, as contas de M e as contas de N pagas adiantado
+  // saldo negativo passa para o mês seguinte: a partir do mês que acabou de fechar, o que ficou no vermelho sai do próximo salário
+  const baseCache = new Map();
   function monthView(N) {
+    if (!baseCache.has(N)) baseCache.set(N, baseMonth(N));
+    const v = { ...baseCache.get(N) }, from = shiftMonth(shiftMonth(salaryMonthOf(today0()), 1), -1);
+    let c = 0, cm = null;
+    if (N > from) for (let k = from; k < N; k = shiftMonth(k, 1)) {
+      if (!baseCache.has(k)) baseCache.set(k, baseMonth(k));
+      // mês sem salário lançado é dado incompleto, não saldo negativo de verdade: não passa adiante
+      const bk = baseCache.get(k); if (!bk.income.length) { c = 0; continue; }
+      const l = bk.left + c; c = Math.min(0, l); if (c < 0) cm = k;
+    }
+    v.carry = c; v.carryFrom = c < 0 ? cm : null; v.left += c;
+    return v;
+  }
+  function baseMonth(N) {
     const M = shiftMonth(N, -1), iM = itemsOf(M), iN = itemsOf(N);
     const v = { N, M, payday: lastBizDay(M), next: lastBizDay(N) };
     v.income = iM.filter(i => i.kind === "in" && !i.res);
@@ -1149,6 +1164,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("splitLbl").textContent = `Dividir com ${n}`; $("splitAll").textContent = `É tudo de ${n}`;
   }
   function render() {
+    baseCache.clear();
     applyProfile();
     if (!state.month) state.month = shiftMonth(salaryMonthOf(today0()), 1);
     const v = monthView(state.month), t0 = today0();
@@ -1174,7 +1190,7 @@ html.privacy .story-card .v { filter: blur(10px); }
     $("heroPct").innerHTML = future ? `<small>ainda não começou</small>` : v.left < 0 ? `!<small>passou</small>` : `${Math.round(used)}%<small>gasto</small>`;
     // por semana; na última semana antes do salário, o valor da semana é a própria sobra (nunca passa dela)
     const wk = daysLeft >= 7 ? ` · ${fmt(Math.floor(v.left / daysLeft * 7))} por semana` : ` · ${fmt(v.left)} nesta última semana (${daysLeft} ${daysLeft === 1 ? "dia" : "dias"})`;
-    $("heroSub").textContent = (v.planLeft ? `Já tirei ${kfmt(v.planLeft)} para guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia${wk}, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia${wk}` : "");
+    $("heroSub").textContent = (v.carry < 0 ? `Já desconta ${fmt(-v.carry)} que ficou no vermelho em ${monthOnly(v.carryFrom)} · ` : "") + (v.planLeft ? `Já tirei ${kfmt(v.planLeft)} para guardar · ` : "") + (v.left <= 0 ? "Não sobra para o mês." : living ? `${fmt(Math.floor(v.left / daysLeft))} por dia${wk}, até o salário de ${ddmm(v.next)}` : future ? `${fmt(Math.floor(v.left / daysLeft))} por dia${wk}` : "");
 
     // entra
     // linha com etiqueta de data, divisão e valor inteiro (fatura e débito/PIX)
@@ -1195,6 +1211,7 @@ html.privacy .story-card .v { filter: blur(10px); }
       return lineEdit(i, v.M, `${esc(i.desc)} ${ddmm(d)}`, d > t0 ? "previsto" : "");
     }).join("");
     if (!v.income.length) h += `<p class="empty">Nenhum salário lançado para ${ddmm(v.payday)}.</p>`;
+    if (v.carry < 0) h += `<div class="line nocheck carry"><div><div class="name">Saldo negativo de ${monthOnly(v.carryFrom)}</div><div class="meta">o que faltou no mês passado sai deste salário</div></div><span class="val num" style="color:var(--out)">− ${fmt(-v.carry)}</span></div>`;
     $("listIn").innerHTML = h;
     $("totIn").textContent = fmt(v.totIn);
 
@@ -2878,7 +2895,7 @@ html.privacy .story-card .v { filter: blur(10px); }
 
   // ---------- início ----------
   const onData = (months) => { state.months = months; render(); };
-  const onSettings = (s) => { state.settings = s || {}; render(); };
+  const onSettings = (s) => { state.settings = s || {}; baseCache.clear(); render(); };
   render();
   LCVault.boot({ onData, onSettings, onStatus: setSync }).then((s) => {
     store = s; render(); refreshCdi();
